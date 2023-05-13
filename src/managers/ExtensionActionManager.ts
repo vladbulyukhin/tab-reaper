@@ -1,7 +1,7 @@
-import iconReaper16 from 'url:../icons/reaper_16.png';
-import iconReaper32 from 'url:../icons/reaper_32.png';
-import iconReaperGray16 from 'url:../icons/reaper_gray_16.png';
-import iconReaperGray32 from 'url:../icons/reaper_gray_32.png';
+import iconReaper16 from '../icons/reaper_16.png';
+import iconReaper32 from '../icons/reaper_32.png';
+import iconReaperGray16 from '../icons/reaper_gray_16.png';
+import iconReaperGray32 from '../icons/reaper_gray_32.png';
 import { IBrowserExtensionActionAPI } from '../api/IBrowserExtensionActionAPI';
 import { IExtensionActionManager } from './IExtensionActionManager';
 import { TabId } from '../types';

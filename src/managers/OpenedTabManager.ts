@@ -1,8 +1,9 @@
+import { IBrowserRuntimeAPI } from '../api/IBrowserRuntimeAPI';
 import { IBrowserTabAPI } from '../api/IBrowserTabAPI';
-import { ITabTimeoutManager } from './ITabTimeoutManager';
 import { Tab, TabActiveInfo, TabId, WindowId } from '../types';
 import { IOpenedTabManager } from './IOpenedTabManager';
 import { IPinnedTabManager } from './IPinnedTabManager';
+import { ITabTimeoutManager } from './ITabTimeoutManager';
 
 // TODO: move to synced storage
 const TimeoutDuration = 15 * 60 * 1000;
@@ -12,6 +13,7 @@ export class OpenedTabManager implements IOpenedTabManager {
   private previousActiveTabInWindow: Map<WindowId, TabId> = new Map();
 
   constructor(
+    private readonly browserRuntimeAPI: IBrowserRuntimeAPI,
     private readonly browserTabAPI: IBrowserTabAPI,
     private readonly tabTimeoutManager: ITabTimeoutManager,
     private readonly pinnedTabManager: IPinnedTabManager
@@ -27,17 +29,12 @@ export class OpenedTabManager implements IOpenedTabManager {
     const tabs = await this.browserTabAPI.query({ active: false });
 
     for (const { id } of tabs) {
-      if (id && !this.pinnedTabManager.isPinned(id)) {
-        this.planTabRemoval(id);
-      }
+      this.planTabRemoval(id);
     }
   }
 
   public onTabCreated(tab: Tab): void {
-    const { id } = tab;
-    if (id && !this.pinnedTabManager.isPinned(id)) {
-      this.planTabRemoval(id);
-    }
+    this.planTabRemoval(tab.id);
   }
 
   public onTabActivated(activeInfo: TabActiveInfo): void {
@@ -45,9 +42,7 @@ export class OpenedTabManager implements IOpenedTabManager {
     this.tabTimeoutManager.clearTimeout(tabId);
 
     const previousActiveId = this.previousActiveTabInWindow.get(windowId);
-    if (previousActiveId && !this.pinnedTabManager.isPinned(previousActiveId)) {
-      this.planTabRemoval(previousActiveId);
-    }
+    this.planTabRemoval(previousActiveId);
 
     this.previousActiveTabInWindow.set(windowId, tabId);
   }
@@ -61,10 +56,15 @@ export class OpenedTabManager implements IOpenedTabManager {
 
     if (this.canRemoveTab(tab)) {
       await this.browserTabAPI.remove(tabId);
+      // TODO: add try/catch for cases when tab is already removed
     }
   }
 
-  private planTabRemoval(tabId: TabId): void {
+  private planTabRemoval(tabId: TabId | undefined): void {
+    if (!tabId || this.pinnedTabManager.isPinned(tabId)) {
+      return;
+    }
+
     this.tabTimeoutManager.setTimeout(tabId, TimeoutDuration, () => {
       this.removeTab(tabId);
     });
@@ -74,7 +74,7 @@ export class OpenedTabManager implements IOpenedTabManager {
     if (!tab || !tab.id) return false;
 
     const isPinned = this.pinnedTabManager.isPinned(tab.id);
-    const errorOccurred = chrome.runtime.lastError; // TODO: replace with separate API
+    const errorOccurred = this.browserRuntimeAPI.lastError; // TODO: replace with separate API
     const isActive = tab.active;
     const makesSound = tab.audible;
 

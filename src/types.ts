@@ -4,13 +4,15 @@ export type TabId = number;
 
 export type WindowId = number;
 
-export type TimeoutId = number;
+export type TimeoutId = ReturnType<typeof setTimeout>;
 
 export type TabQueryInfo = chrome.tabs.QueryInfo;
 
 export type TabActiveInfo = chrome.tabs.TabActiveInfo;
 
 export type BrowserClickedEvent = chrome.action.BrowserClickedEvent;
+
+export type BrowserLastError = chrome.runtime.LastError;
 
 export type ExtensionInstalledEvent = chrome.runtime.RuntimeInstalledEvent;
 
