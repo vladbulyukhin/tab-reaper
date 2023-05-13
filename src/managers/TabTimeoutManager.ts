@@ -4,7 +4,7 @@ import { ITabTimeoutManager } from './ITabTimeoutManager';
 export class TabTimeoutManager implements ITabTimeoutManager {
   private timeouts: Map<TabId, TimeoutId> = new Map();
 
-  public setTimeout(tabId: number, delay: number, callback: () => void): number {
+  public setTimeout(tabId: TabId, delay: number, callback: () => void): TimeoutId {
     if (this.timeouts.has(tabId)) {
       this.clearTimeout(tabId);
     }
@@ -14,7 +14,7 @@ export class TabTimeoutManager implements ITabTimeoutManager {
     return timeoutId;
   }
 
-  public clearTimeout(tabId: number): void {
+  public clearTimeout(tabId: TabId): void {
     const timeoutId = this.timeouts.get(tabId) ?? 0;
     this.timeouts.delete(tabId);
     clearTimeout(timeoutId);
