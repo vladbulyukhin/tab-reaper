@@ -14,6 +14,8 @@ export type BrowserClickedEvent = chrome.action.BrowserClickedEvent;
 
 export type BrowserLastError = chrome.runtime.LastError;
 
+export type BrowserStorageChangedEvent = chrome.storage.StorageChangedEvent;
+
 export type ExtensionInstalledEvent = chrome.runtime.RuntimeInstalledEvent;
 
 export type ExtensionStartupEvent = chrome.runtime.RuntimeEvent;

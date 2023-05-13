@@ -1,20 +1,39 @@
 <!DOCTYPE html>
 <html>
-    <head>
-        <title>Tab Reaper: Unused Tab Collector</title>
-    </head>
-    <body>
-        <label for="timeout">Timeout: </label>
-        <select id="timeout">
-            <option value="10">10 minutes</option>
-            <option value="15">15 minutes</option>
-            <option value="30">30 minutes</option>
-            <option value="60">1 hour</option>
-        </select>
+  <head>
+    <title>Tab Reaper: Unused Tab Collector</title>
+  </head>
+  <body>
+    <div>
+      <label for="timeoutSelect">Close tabs that I haven't touched for </label>
+      <select id="timeoutSelect">
+        <option value="10">10 minutes</option>
+        <option value="15">15 minutes</option>
+        <option value="30">30 minutes</option>
+        <option value="60">1 hour</option>
+      </select>
+    </div>
 
-        <div id="status"></div>
-        <button id="save">Save</button>
+    <div>
+      <label>
+        <input id="limitCheckbox" type="checkbox" />
+        Limit the number of tabs that can be opened at the same time
+      </label>
 
-        <script src="./options.ts" />
-    </body>
+      <input id="limitInput" type="number" />
+    </div>
+
+    <div id="status"></div>
+    <button id="save">Save</button>
+
+    <script src="./options.ts" type="module"></script>
+
+    <footer>
+      <!-- parcel-ignore -->
+      <a target="_blank" href="https://www.flaticon.com/free-icons/skull" title="skull icons"
+        >Skull icons created by Freepik - Flaticon</a
+      >
+      <!-- end-parcel-ignore -->
+    </footer>
+  </body>
 </html>
