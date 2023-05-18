@@ -2,7 +2,7 @@ import { IBrowserExtensionActionAPI } from '../api/IBrowserExtensionActionAPI';
 import { IBrowserRuntimeAPI } from '../api/IBrowserRuntimeAPI';
 import { IBrowserTabAPI } from '../api/IBrowserTabAPI';
 import { IOpenedTabManager } from '../managers/IOpenedTabManager';
-import { IPinnedTabManager } from '../managers/IPinnedTabManager';
+import { IExcludedTabManager } from '../managers/IExcludedTabManager';
 import { Tab } from '../types';
 import { IBackgroundService } from './IBackgroundService';
 
@@ -12,7 +12,7 @@ export class BackgroundService implements IBackgroundService {
     private readonly browserTabAPI: IBrowserTabAPI,
     private readonly browserActionAPI: IBrowserExtensionActionAPI,
     private readonly openedTabManager: IOpenedTabManager,
-    private readonly pinnedTabManager: IPinnedTabManager
+    private readonly excludedTabManager: IExcludedTabManager
   ) {}
 
   public start(): void {
@@ -29,7 +29,7 @@ export class BackgroundService implements IBackgroundService {
   private addActionEventListeners(): void {
     this.browserActionAPI.onClicked.addListener((tab: Tab) => {
       if (!tab.id) return;
-      this.pinnedTabManager.toggle(tab.id);
+      this.excludedTabManager.toggle(tab.id);
     });
   }
 

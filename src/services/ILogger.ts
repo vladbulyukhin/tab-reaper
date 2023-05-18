@@ -1,1 +1,3 @@
-export interface ILogger {}
+export interface ILogger {
+    
+}

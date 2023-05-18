@@ -21,5 +21,10 @@ module.exports = function (config) {
     browsers: ['Chrome'],
     singleRun: false,
     concurrency: Infinity,
+    karmaTypescriptConfig: {
+      compilerOptions: {
+        target: 'es2015',
+      },
+    },
   });
 };

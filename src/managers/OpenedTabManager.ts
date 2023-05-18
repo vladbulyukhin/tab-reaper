@@ -2,7 +2,7 @@ import { IBrowserRuntimeAPI } from '../api/IBrowserRuntimeAPI';
 import { IBrowserTabAPI } from '../api/IBrowserTabAPI';
 import { Tab, TabActiveInfo, TabId, WindowId } from '../types';
 import { IOpenedTabManager } from './IOpenedTabManager';
-import { IPinnedTabManager } from './IPinnedTabManager';
+import { IExcludedTabManager } from './IExcludedTabManager';
 import { ITabTimeoutManager } from './ITabTimeoutManager';
 
 // TODO: move to synced storage
@@ -16,7 +16,7 @@ export class OpenedTabManager implements IOpenedTabManager {
     private readonly browserRuntimeAPI: IBrowserRuntimeAPI,
     private readonly browserTabAPI: IBrowserTabAPI,
     private readonly tabTimeoutManager: ITabTimeoutManager,
-    private readonly pinnedTabManager: IPinnedTabManager
+    private readonly excludedTabManager: IExcludedTabManager
   ) {
     // TODO: test if necessary
     this.watchAllTabs = this.watchAllTabs.bind(this);
@@ -61,7 +61,7 @@ export class OpenedTabManager implements IOpenedTabManager {
   }
 
   private planTabRemoval(tabId: TabId | undefined): void {
-    if (!tabId || this.pinnedTabManager.isPinned(tabId)) {
+    if (!tabId || this.excludedTabManager.isExcluded(tabId)) {
       return;
     }
 
@@ -73,11 +73,12 @@ export class OpenedTabManager implements IOpenedTabManager {
   private canRemoveTab(tab: Tab): boolean {
     if (!tab || !tab.id) return false;
 
-    const isPinned = this.pinnedTabManager.isPinned(tab.id);
-    const errorOccurred = this.browserRuntimeAPI.lastError; // TODO: replace with separate API
+    const errorOccurred = this.browserRuntimeAPI.lastError;
+    const isExcluded = this.excludedTabManager.isExcluded(tab.id);
+    const isPinned = tab.pinned;
     const isActive = tab.active;
     const makesSound = tab.audible;
 
-    return !errorOccurred && !isPinned && !isActive && !makesSound;
+    return !errorOccurred && !isExcluded && !isPinned && !isActive && !makesSound;
   }
 }
