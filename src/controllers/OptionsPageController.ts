@@ -1,33 +1,12 @@
 import { IConfigurationManager } from '../managers/IConfigurationManager';
-import { IConfiguration, toConfiguration } from '../models/Configuration';
+import { toConfiguration } from '../models/Configuration';
 import { IPageController } from './IPageController';
-
-const saveOptions = () => {
-  const timeout = document.getElementById('timeout');
-
-  if (timeout instanceof HTMLSelectElement) {
-    const value = timeout.value;
-
-    chrome.storage.sync.set({ timeout: value }, () => {
-      const status = document.getElementById('status');
-
-      if (status) {
-        status.textContent = 'Options saved.';
-        setTimeout(() => {
-          status.textContent = '';
-        }, 750);
-      }
-    });
-  }
-};
 
 export class OptionsPageController implements IPageController {
   private $timeoutSelect: HTMLSelectElement;
   private $limitCheckbox: HTMLInputElement;
   private $limitInput: HTMLInputElement;
   private $saveButton: HTMLButtonElement;
-
-  private configuration: IConfiguration;
 
   constructor(private readonly configurationManager: IConfigurationManager) {
     this.attach = this.attach.bind(this);
@@ -73,8 +52,6 @@ export class OptionsPageController implements IPageController {
     this.$timeoutSelect.value = String(configuration.tabRemovalTimeoutMin);
     this.$limitCheckbox.checked = configuration.tabLimit > 0;
     this.$limitInput.value = String(configuration.tabLimit);
-
-    this.configuration = configuration;
   }
 
   private async saveConfiguration(): Promise<void> {
