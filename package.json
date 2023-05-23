@@ -19,7 +19,7 @@
   },
   "keywords": [],
   "author": "Vladislav Bulyukhin <vladislav.bulyukhin@gmail.com>",
-  "license": "ISC",
+  "license": "GPL-3.0",
   "devDependencies": {
     "@parcel/config-webextension": "^2.8.3",
     "@types/chrome": "^0.0.235",
