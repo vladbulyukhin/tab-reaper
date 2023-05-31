@@ -1,19 +1,19 @@
-import iconReaper16 from '../icons/reaper_16.png';
-import iconReaper32 from '../icons/reaper_32.png';
-import iconReaperGray16 from '../icons/reaper_gray_16.png';
-import iconReaperGray32 from '../icons/reaper_gray_32.png';
+import icon16 from '../icons/icon-active-16.png';
+import icon32 from '../icons/icon-active-32.png';
+import iconGray16 from '../icons/icon-gray-16.png';
+import iconGray32 from '../icons/icon-gray-32.png';
 import { IBrowserExtensionActionAPI } from '../api/IBrowserExtensionActionAPI';
 import { IExtensionActionManager } from './IExtensionActionManager';
 import { TabId } from '../types';
 
 const disabledIconPaths = {
-  '16': iconReaperGray16,
-  '32': iconReaperGray32,
+  '16': iconGray16,
+  '32': iconGray32,
 };
 
 const enabledIconPaths = {
-  '16': iconReaper16,
-  '32': iconReaper32,
+  '16': icon16,
+  '32': icon32,
 };
 
 export class ExtensionActionManager implements IExtensionActionManager {

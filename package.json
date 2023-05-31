@@ -8,7 +8,8 @@
     "www.flaticon.com"
   ],
   "scripts": {
-    "build": "parcel build src/manifest.json",
+    "prebuild": "rimraf dist",
+    "build": "parcel build src/manifest.json --config @parcel/config-webextension",
     "ci": "npm ci",
     "i": "npm install",
     "lint": "eslint {src,tests}/**/*.{js,ts,tsx}",
@@ -22,6 +23,7 @@
   "license": "GPL-3.0",
   "devDependencies": {
     "@parcel/config-webextension": "^2.8.3",
+    "@parcel/transformer-sass": "^2.8.3",
     "@types/chrome": "^0.0.235",
     "@types/jasmine": "^4.3.1",
     "@typescript-eslint/eslint-plugin": "^5.59.5",
@@ -38,6 +40,9 @@
     "karma-typescript": "^5.5.4",
     "parcel": "^2.8.3",
     "parcel-resolver-ignore": "^2.1.3",
-    "prettier": "^2.8.8"
+    "postcss": "^8.4.24",
+    "prettier": "^2.8.8",
+    "rimraf": "^5.0.1",
+    "tailwindcss": "^3.3.2"
   }
 }

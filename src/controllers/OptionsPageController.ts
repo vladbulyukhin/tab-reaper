@@ -4,7 +4,6 @@ import { IPageController } from './IPageController';
 
 export class OptionsPageController implements IPageController {
   private $timeoutSelect: HTMLSelectElement;
-  private $limitCheckbox: HTMLInputElement;
   private $limitInput: HTMLInputElement;
   private $saveButton: HTMLButtonElement;
 
@@ -24,11 +23,6 @@ export class OptionsPageController implements IPageController {
       this.$timeoutSelect = timeoutSelect;
     }
 
-    const limitCheckbox = document.getElementById('limitCheckbox');
-    if (limitCheckbox instanceof HTMLInputElement) {
-      this.$limitCheckbox = limitCheckbox;
-    }
-
     const limitInput = document.getElementById('limitInput');
     if (limitInput instanceof HTMLInputElement) {
       this.$limitInput = limitInput;
@@ -39,7 +33,7 @@ export class OptionsPageController implements IPageController {
       this.$saveButton = saveButton;
     }
 
-    if (!this.$timeoutSelect || !this.$limitCheckbox || !this.$limitInput || !this.$saveButton) {
+    if (!this.$timeoutSelect || !this.$limitInput || !this.$saveButton) {
       throw new ReferenceError('Inputs have not been found.');
     }
 
@@ -50,14 +44,12 @@ export class OptionsPageController implements IPageController {
     const configuration = await this.configurationManager.get();
 
     this.$timeoutSelect.value = String(configuration.tabRemovalTimeoutMin);
-    this.$limitCheckbox.checked = configuration.tabLimit > 0;
     this.$limitInput.value = String(configuration.tabLimit);
   }
 
   private async saveConfiguration(): Promise<void> {
     const configuration = toConfiguration({
       tabRemovalTimeoutMin: parseInt(this.$timeoutSelect.value, 10),
-      tabLimit: parseInt(this.$limitInput.value, 10),
     });
 
     await this.configurationManager.save(configuration);

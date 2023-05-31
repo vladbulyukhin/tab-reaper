@@ -25,3 +25,5 @@ export type TabCreatedEvent = chrome.tabs.TabCreatedEvent;
 export type TabActivatedEvent = chrome.tabs.TabActivatedEvent;
 
 export type TabRemovedEvent = chrome.tabs.TabRemovedEvent;
+
+export type CleanUpFunction = () => void;
