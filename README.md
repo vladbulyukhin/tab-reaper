@@ -1,4 +1,8 @@
-# Tab Reaper: Unused Tab Collector Extension [Work In Progress]
+<p align="center">
+  <img src="./src/icons/icon-active-96.png" />
+</p>
+
+# Tab Reaper: Unused Tab Collector Extension
 
 Chrome Extension that automatically closes browser tabs that haven't
 been used for a while.
