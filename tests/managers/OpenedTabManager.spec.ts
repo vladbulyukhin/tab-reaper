@@ -5,6 +5,7 @@ import { IExcludedTabManager } from '../../src/managers/IExcludedTabManager';
 import { ITabTimeoutManager } from '../../src/managers/ITabTimeoutManager';
 import { OpenedTabManager } from '../../src/managers/OpenedTabManager';
 import { IBrowserRuntimeAPI } from '../../src/api/IBrowserRuntimeAPI';
+import { IConfigurationManager } from '../../src/managers/IConfigurationManager';
 
 describe('OpenedTabManager', () => {
   let openedTabManager: IOpenedTabManager;
@@ -12,13 +13,21 @@ describe('OpenedTabManager', () => {
   let browserTabAPI: jasmine.SpyObj<IBrowserTabAPI>;
   let tabTimeoutManager: jasmine.SpyObj<ITabTimeoutManager>;
   let excludedTabManager: jasmine.SpyObj<IExcludedTabManager>;
+  let configurationManager: jasmine.SpyObj<IConfigurationManager>;
 
   beforeEach(() => {
     browserRuntimeAPI = jasmine.createSpyObj('BrowserRuntimeAPI', ['lastError']);
     browserTabAPI = jasmine.createSpyObj('BrowserTabAPI', ['get', 'query', 'remove']);
     tabTimeoutManager = jasmine.createSpyObj('TabTimeoutManager', ['setTimeout', 'clearTimeout']);
     excludedTabManager = jasmine.createSpyObj('ExcludedTabManager', ['isExcluded', 'exclude', 'include', 'toggle']);
-    openedTabManager = new OpenedTabManager(browserRuntimeAPI, browserTabAPI, tabTimeoutManager, excludedTabManager);
+    configurationManager = jasmine.createSpyObj('ConfigurationManager', ['get', 'save']);
+    openedTabManager = new OpenedTabManager(
+      browserRuntimeAPI,
+      browserTabAPI,
+      tabTimeoutManager,
+      excludedTabManager,
+      configurationManager
+    );
   });
 
   describe('onTabRemoved', () => {
@@ -91,8 +100,6 @@ describe('OpenedTabManager', () => {
       expect(tabTimeoutManager.setTimeout).not.toHaveBeenCalled();
     });
   });
-
-  // describe('watchAllTabs', () => {});
 
   function createTestTab(): Tab & { id: number } {
     return {

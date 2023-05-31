@@ -4,19 +4,18 @@ import { Tab, TabActiveInfo, TabId, WindowId } from '../types';
 import { IOpenedTabManager } from './IOpenedTabManager';
 import { IExcludedTabManager } from './IExcludedTabManager';
 import { ITabTimeoutManager } from './ITabTimeoutManager';
-
-// TODO: move to synced storage
-const TimeoutDuration = 15 * 60 * 1000;
-// const TimeoutDuration = (1 / 2) * 60 * 1000; // (for test purposes)
+import { IConfigurationManager } from './IConfigurationManager';
 
 export class OpenedTabManager implements IOpenedTabManager {
+  private static TimeoutDuration: number = 15 * 60 * 1000;
   private previousActiveTabInWindow: Map<WindowId, TabId> = new Map();
 
   constructor(
     private readonly browserRuntimeAPI: IBrowserRuntimeAPI,
     private readonly browserTabAPI: IBrowserTabAPI,
     private readonly tabTimeoutManager: ITabTimeoutManager,
-    private readonly excludedTabManager: IExcludedTabManager
+    private readonly excludedTabManager: IExcludedTabManager,
+    private readonly configurationManager: IConfigurationManager
   ) {
     // TODO: test if necessary
     this.watchAllTabs = this.watchAllTabs.bind(this);
@@ -60,12 +59,14 @@ export class OpenedTabManager implements IOpenedTabManager {
     }
   }
 
-  private planTabRemoval(tabId: TabId | undefined): void {
+  private async planTabRemoval(tabId: TabId | undefined): Promise<void> {
     if (!tabId || this.excludedTabManager.isExcluded(tabId)) {
       return;
     }
 
-    this.tabTimeoutManager.setTimeout(tabId, TimeoutDuration, () => {
+    const timeoutDuration = (await this.configurationManager.get()).tabRemovalTimeoutMin ?? OpenedTabManager.TimeoutDuration;
+
+    this.tabTimeoutManager.setTimeout(tabId, timeoutDuration, () => {
       this.removeTab(tabId);
     });
   }
@@ -73,12 +74,13 @@ export class OpenedTabManager implements IOpenedTabManager {
   private canRemoveTab(tab: Tab): boolean {
     if (!tab || !tab.id) return false;
 
-    const errorOccurred = this.browserRuntimeAPI.lastError;
+    const errorOccurred = this.browserRuntimeAPI.getLastError();
     const isExcluded = this.excludedTabManager.isExcluded(tab.id);
     const isPinned = tab.pinned;
     const isActive = tab.active;
     const makesSound = tab.audible;
+    const isInGroup = tab.groupId;
 
-    return !errorOccurred && !isExcluded && !isPinned && !isActive && !makesSound;
+    return !errorOccurred && !isExcluded && !isPinned && !isActive && !makesSound && !isInGroup;
   }
 }
