@@ -3,8 +3,10 @@ import { toConfiguration } from '../models/Configuration';
 import { IPageController } from './IPageController';
 
 export class OptionsPageController implements IPageController {
-  private $timeoutSelect: HTMLSelectElement;
-  private $limitInput: HTMLInputElement;
+  private $timeoutInput: HTMLInputElement;
+  private $pinnedTabCheckbox: HTMLInputElement;
+  private $groupedTabCheckbox: HTMLInputElement;
+  private $audibleTabCheckbox: HTMLInputElement;
   private $saveButton: HTMLButtonElement;
 
   constructor(private readonly configurationManager: IConfigurationManager) {
@@ -18,14 +20,24 @@ export class OptionsPageController implements IPageController {
   }
 
   private prepareControls(): void {
-    const timeoutSelect = document.getElementById('timeoutSelect');
-    if (timeoutSelect instanceof HTMLSelectElement) {
-      this.$timeoutSelect = timeoutSelect;
+    const timeoutInput = document.getElementById('inactivity-minutes');
+    if (timeoutInput instanceof HTMLInputElement) {
+      this.$timeoutInput = timeoutInput;
     }
 
-    const limitInput = document.getElementById('limitInput');
-    if (limitInput instanceof HTMLInputElement) {
-      this.$limitInput = limitInput;
+    const pinnedTabCheckbox = document.getElementById('pinned-tabs');
+    if (pinnedTabCheckbox instanceof HTMLInputElement) {
+      this.$pinnedTabCheckbox = pinnedTabCheckbox;
+    }
+
+    const groupedTabsCheckbox = document.getElementById('grouped-tabs');
+    if (groupedTabsCheckbox instanceof HTMLInputElement) {
+      this.$groupedTabCheckbox = groupedTabsCheckbox;
+    }
+
+    const audibleTabsCheckbox = document.getElementById('audible-tabs');
+    if (audibleTabsCheckbox instanceof HTMLInputElement) {
+      this.$audibleTabCheckbox = audibleTabsCheckbox;
     }
 
     const saveButton = document.getElementById('save');
@@ -33,7 +45,13 @@ export class OptionsPageController implements IPageController {
       this.$saveButton = saveButton;
     }
 
-    if (!this.$timeoutSelect || !this.$limitInput || !this.$saveButton) {
+    if (
+      !this.$timeoutInput ||
+      !this.$audibleTabCheckbox ||
+      !this.$groupedTabCheckbox ||
+      !this.$pinnedTabCheckbox ||
+      !this.$saveButton
+    ) {
       throw new ReferenceError('Inputs have not been found.');
     }
 
@@ -43,13 +61,12 @@ export class OptionsPageController implements IPageController {
   private async reloadConfiguration(): Promise<void> {
     const configuration = await this.configurationManager.get();
 
-    this.$timeoutSelect.value = String(configuration.tabRemovalTimeoutMin);
-    this.$limitInput.value = String(configuration.tabLimit);
+    this.$timeoutInput.value = String(configuration.tabRemovalTimeoutMin);
   }
 
   private async saveConfiguration(): Promise<void> {
     const configuration = toConfiguration({
-      tabRemovalTimeoutMin: parseInt(this.$timeoutSelect.value, 10),
+      tabRemovalTimeoutMin: parseInt(this.$timeoutInput.value, 10),
     });
 
     await this.configurationManager.save(configuration);
