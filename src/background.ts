@@ -1,6 +1,7 @@
 import { chromeActionAPI } from './api/chromeActionAPI';
 import { chromeLocalStorageAPI } from './api/chromeLocalStorageAPI';
 import { chromeRuntimeAPI } from './api/chromeRuntimeAPI';
+import { chromeSyncStorageAPI } from './api/chromeSyncStorageAPI';
 import { chromeTabAPI } from './api/chromeTabAPI';
 import { ConfigurationManager } from './managers/ConfigurationManager';
 import { ExcludedTabManager } from './managers/ExcludedTabManager';
@@ -12,7 +13,7 @@ import { BackgroundService } from './services/BackgroundService';
 const tabTimeoutManager = new TabTimeoutManager();
 const extensionIconService = new ExtensionActionManager(chromeActionAPI);
 const excludedTabManager = new ExcludedTabManager(chromeLocalStorageAPI, extensionIconService);
-const configurationManager = new ConfigurationManager(chromeLocalStorageAPI);
+const configurationManager = new ConfigurationManager(chromeSyncStorageAPI);
 const openedTabManager = new OpenedTabManager(
   chromeRuntimeAPI,
   chromeTabAPI,
