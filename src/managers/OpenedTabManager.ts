@@ -7,7 +7,7 @@ import { ITabTimeoutManager } from './ITabTimeoutManager';
 import { IConfigurationManager } from './IConfigurationManager';
 
 export class OpenedTabManager implements IOpenedTabManager {
-  private static TimeoutDuration: number = 15 * 60 * 1000;
+  private static TimeoutDurationMin = 15;
   private previousActiveTabInWindow: Map<WindowId, TabId> = new Map();
 
   constructor(
@@ -64,9 +64,10 @@ export class OpenedTabManager implements IOpenedTabManager {
       return;
     }
 
-    const timeoutDuration = (await this.configurationManager.get()).tabRemovalTimeoutMin ?? OpenedTabManager.TimeoutDuration;
+    const timeoutDuration =
+      (await this.configurationManager.get()).tabRemovalTimeoutMin ?? OpenedTabManager.TimeoutDurationMin;
 
-    this.tabTimeoutManager.setTimeout(tabId, timeoutDuration, () => {
+    this.tabTimeoutManager.setTimeout(tabId, timeoutDuration * 60 * 1000, () => {
       this.removeTab(tabId);
     });
   }
@@ -79,7 +80,7 @@ export class OpenedTabManager implements IOpenedTabManager {
     const isPinned = tab.pinned;
     const isActive = tab.active;
     const makesSound = tab.audible;
-    const isInGroup = tab.groupId;
+    const isInGroup = tab.groupId != -1;
 
     return !errorOccurred && !isExcluded && !isPinned && !isActive && !makesSound && !isInGroup;
   }

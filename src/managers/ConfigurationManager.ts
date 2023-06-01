@@ -23,9 +23,9 @@ export class ConfigurationManager implements IConfigurationManager {
   }
 
   private handleConfigurationChanged(changes: { [key: string]: ConfigurationChange }): void {
-    for (const [property, change] of Object.entries(changes)) {
-      if (change.newValue) {
-        this._configuration[property] = change.newValue;
+    if ('configuration' in changes) {
+      if (changes.configuration.newValue) {
+        this._configuration = toConfiguration(changes.configuration.newValue);
       }
     }
   }
