@@ -6,6 +6,7 @@ import { OpenedTabManager } from '../../src/managers/OpenedTabManager';
 import { IBrowserRuntimeAPI } from '../../src/api/IBrowserRuntimeAPI';
 import { IConfigurationManager } from '../../src/managers/IConfigurationManager';
 import { ITabAlarmManager } from '../../src/managers/ITabAlarmManager';
+import { emptyConfiguration } from '../../src/models/Configuration';
 
 describe('OpenedTabManager', () => {
   let openedTabManager: IOpenedTabManager;
@@ -22,70 +23,72 @@ describe('OpenedTabManager', () => {
     excludedTabManager = jasmine.createSpyObj('ExcludedTabManager', ['isExcluded', 'exclude', 'include', 'toggle']);
     configurationManager = jasmine.createSpyObj('ConfigurationManager', ['get', 'save']);
     openedTabManager = new OpenedTabManager(browserRuntimeAPI, browserTabAPI, tabAlarmManager, excludedTabManager, configurationManager);
+
+    configurationManager.get.and.returnValue(Promise.resolve(emptyConfiguration));
   });
 
   describe('onTabRemoved', () => {
-    it('should clear existing timeouts', () => {
+    it('should clear existing timeouts', async () => {
       const tabId: TabId = 1;
 
-      openedTabManager.onTabRemoved(tabId);
+      await openedTabManager.onTabRemoved(tabId);
 
       expect(tabAlarmManager.clearAlarm).toHaveBeenCalledWith(tabId);
     });
   });
 
   describe('onTabActivated', () => {
-    it('should clear timeout for activated tab', () => {
+    it('should clear timeout for activated tab', async () => {
       const windowId: WindowId = 1;
       const tabId: TabId = 2;
 
-      openedTabManager.onTabActivated({ windowId, tabId });
+      await openedTabManager.onTabActivated({ windowId, tabId });
 
       expect(tabAlarmManager.clearAlarm).toHaveBeenCalledWith(tabId);
     });
 
-    it('should plan removal of the previous tab', () => {
+    it('should plan removal of the previous tab', async () => {
       const windowId: WindowId = 1;
       const initialTabId: TabId = 2;
 
-      openedTabManager.onTabActivated({ windowId, tabId: initialTabId });
+      await openedTabManager.onTabActivated({ windowId, tabId: initialTabId });
 
       const tabId: TabId = 3;
 
-      openedTabManager.onTabActivated({ windowId, tabId });
+      await openedTabManager.onTabActivated({ windowId, tabId });
 
       expect(tabAlarmManager.setAlarm).toHaveBeenCalledWith(initialTabId, jasmine.any(Number), jasmine.any(Function));
     });
 
-    it("should not plan removal of the previous tab if it's pinned", () => {
+    it("should not plan removal of the previous tab if it's pinned", async () => {
       const windowId: WindowId = 1;
       const initialTabId: TabId = 2;
 
-      openedTabManager.onTabActivated({ windowId, tabId: initialTabId });
+      await openedTabManager.onTabActivated({ windowId, tabId: initialTabId });
 
       const tabId: TabId = 3;
       excludedTabManager.isExcluded.and.returnValue(true);
 
-      openedTabManager.onTabActivated({ windowId, tabId });
+      await openedTabManager.onTabActivated({ windowId, tabId });
 
       expect(tabAlarmManager.setAlarm).not.toHaveBeenCalled();
     });
   });
 
   describe('onTabCreated', () => {
-    it('should plan removal of created tab', () => {
+    it('should plan removal of created tab', async () => {
       const tab = createTestTab();
 
-      openedTabManager.onTabCreated(tab);
+      await openedTabManager.onTabCreated(tab);
 
       expect(tabAlarmManager.setAlarm).toHaveBeenCalledWith(tab.id, jasmine.any(Number), jasmine.any(Function));
     });
 
-    it('should not plan removal of excluded tab', () => {
+    it('should not plan removal of excluded tab', async () => {
       const tab = createTestTab();
       excludedTabManager.isExcluded.and.returnValue(true);
 
-      openedTabManager.onTabCreated(tab);
+      await openedTabManager.onTabCreated(tab);
 
       expect(tabAlarmManager.setAlarm).not.toHaveBeenCalled();
     });
