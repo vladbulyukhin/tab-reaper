@@ -3,11 +3,12 @@ import { toConfiguration } from '../models/Configuration';
 import { IPageController } from './IPageController';
 
 export class OptionsPageController implements IPageController {
-  private $timeoutInput: HTMLInputElement;
-  private $pinnedTabCheckbox: HTMLInputElement;
-  private $groupedTabCheckbox: HTMLInputElement;
   private $audibleTabCheckbox: HTMLInputElement;
+  private $delayInput: HTMLInputElement;
+  private $groupedTabCheckbox: HTMLInputElement;
+  private $pinnedTabCheckbox: HTMLInputElement;
   private $saveButton: HTMLButtonElement;
+  private $savedMessage: HTMLParagraphElement;
 
   constructor(private readonly configurationManager: IConfigurationManager) {
     this.attach = this.attach.bind(this);
@@ -20,55 +21,82 @@ export class OptionsPageController implements IPageController {
   }
 
   private prepareControls(): void {
-    const timeoutInput = document.getElementById('inactivity-minutes');
-    if (timeoutInput instanceof HTMLInputElement) {
-      this.$timeoutInput = timeoutInput;
-    }
-
-    const pinnedTabCheckbox = document.getElementById('pinned-tabs');
-    if (pinnedTabCheckbox instanceof HTMLInputElement) {
-      this.$pinnedTabCheckbox = pinnedTabCheckbox;
-    }
-
-    const groupedTabsCheckbox = document.getElementById('grouped-tabs');
-    if (groupedTabsCheckbox instanceof HTMLInputElement) {
-      this.$groupedTabCheckbox = groupedTabsCheckbox;
-    }
-
-    const audibleTabsCheckbox = document.getElementById('audible-tabs');
-    if (audibleTabsCheckbox instanceof HTMLInputElement) {
-      this.$audibleTabCheckbox = audibleTabsCheckbox;
-    }
-
-    const saveButton = document.getElementById('save');
-    if (saveButton instanceof HTMLButtonElement) {
-      this.$saveButton = saveButton;
-    }
+    this.$audibleTabCheckbox = OptionsPageController.getPageElementById<HTMLInputElement>('audible-tabs', HTMLInputElement);
+    this.$delayInput = OptionsPageController.getPageElementById<HTMLInputElement>('inactivity-minutes', HTMLInputElement);
+    this.$groupedTabCheckbox = OptionsPageController.getPageElementById<HTMLInputElement>('grouped-tabs', HTMLInputElement);
+    this.$pinnedTabCheckbox = OptionsPageController.getPageElementById<HTMLInputElement>('pinned-tabs', HTMLInputElement);
+    this.$saveButton = OptionsPageController.getPageElementById<HTMLButtonElement>('save', HTMLButtonElement);
+    this.$savedMessage = OptionsPageController.getPageElementById<HTMLParagraphElement>('saved-message', HTMLParagraphElement);
 
     if (
-      !this.$timeoutInput ||
       !this.$audibleTabCheckbox ||
+      !this.$delayInput ||
       !this.$groupedTabCheckbox ||
       !this.$pinnedTabCheckbox ||
-      !this.$saveButton
+      !this.$saveButton ||
+      !this.$savedMessage
     ) {
-      throw new ReferenceError('Inputs have not been found.');
+      throw new ReferenceError('Inputs are not available on the options page.');
     }
 
     this.$saveButton.addEventListener('click', this.saveConfiguration);
+    this.watchSaveButtonState();
   }
 
   private async reloadConfiguration(): Promise<void> {
     const configuration = await this.configurationManager.get();
 
-    this.$timeoutInput.value = String(configuration.tabRemovalTimeoutMin);
+    this.$delayInput.value = String(configuration.tabRemovalDelayMin);
+    this.$audibleTabCheckbox.checked = configuration.keepAudibleTabs;
+    this.$groupedTabCheckbox.checked = configuration.keepGroupedTabs;
+    this.$pinnedTabCheckbox.checked = configuration.keepPinnedTabs;
   }
 
   private async saveConfiguration(): Promise<void> {
     const configuration = toConfiguration({
-      tabRemovalTimeoutMin: parseInt(this.$timeoutInput.value, 10),
+      keepAudibleTabs: this.$audibleTabCheckbox.checked,
+      keepGroupedTabs: this.$groupedTabCheckbox.checked,
+      keepPinnedTabs: this.$pinnedTabCheckbox.checked,
+      tabRemovalDelayMin: parseInt(this.$delayInput.value, 10),
     });
 
     await this.configurationManager.save(configuration);
+
+    this.$savedMessage.classList.remove('hidden');
+    this.$savedMessage.classList.add('inline');
+
+    this.$saveButton.disabled = true;
+
+    setTimeout(() => {
+      this.$savedMessage.classList.add('hidden');
+      this.$savedMessage.classList.remove('inline');
+    }, 5000);
+  }
+
+  private watchSaveButtonState(): void {
+    const dependencies: ReadonlyArray<HTMLElement> = [
+      this.$audibleTabCheckbox,
+      this.$delayInput,
+      this.$groupedTabCheckbox,
+      this.$pinnedTabCheckbox,
+    ];
+
+    dependencies.forEach((dep) => {
+      dep.addEventListener('change', async () => {
+        const configuration = await this.configurationManager.get();
+
+        this.$saveButton.disabled = !(
+          configuration.keepAudibleTabs !== this.$audibleTabCheckbox.checked ||
+          configuration.keepGroupedTabs !== this.$groupedTabCheckbox.checked ||
+          configuration.keepPinnedTabs !== this.$pinnedTabCheckbox.checked ||
+          String(configuration.tabRemovalDelayMin) !== this.$delayInput.value
+        );
+      });
+    });
+  }
+
+  private static getPageElementById<T extends HTMLElement>(id: string, constructor: { new (): T }): T | null {
+    const element = document.getElementById(id);
+    return element instanceof constructor ? element : null;
   }
 }
