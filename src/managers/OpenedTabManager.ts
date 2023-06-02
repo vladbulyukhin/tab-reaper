@@ -3,7 +3,7 @@ import { IBrowserTabAPI } from '../api/IBrowserTabAPI';
 import { Tab, TabActiveInfo, TabId, WindowId } from '../types';
 import { IOpenedTabManager } from './IOpenedTabManager';
 import { IExcludedTabManager } from './IExcludedTabManager';
-import { ITabTimeoutManager } from './ITabTimeoutManager';
+import { ITabAlarmManager } from './ITabAlarmManager';
 import { IConfigurationManager } from './IConfigurationManager';
 
 export class OpenedTabManager implements IOpenedTabManager {
@@ -13,11 +13,10 @@ export class OpenedTabManager implements IOpenedTabManager {
   constructor(
     private readonly browserRuntimeAPI: IBrowserRuntimeAPI,
     private readonly browserTabAPI: IBrowserTabAPI,
-    private readonly tabTimeoutManager: ITabTimeoutManager,
+    private readonly tabAlarmManager: ITabAlarmManager,
     private readonly excludedTabManager: IExcludedTabManager,
     private readonly configurationManager: IConfigurationManager
   ) {
-    // TODO: test if necessary
     this.watchAllTabs = this.watchAllTabs.bind(this);
     this.onTabActivated = this.onTabActivated.bind(this);
     this.onTabCreated = this.onTabCreated.bind(this);
@@ -28,7 +27,7 @@ export class OpenedTabManager implements IOpenedTabManager {
     const tabs = await this.browserTabAPI.query({ active: false });
 
     for (const { id } of tabs) {
-      this.planTabRemoval(id);
+      await this.planTabRemoval(id);
     }
   }
 
@@ -38,7 +37,7 @@ export class OpenedTabManager implements IOpenedTabManager {
 
   public onTabActivated(activeInfo: TabActiveInfo): void {
     const { windowId, tabId } = activeInfo;
-    this.tabTimeoutManager.clearTimeout(tabId);
+    this.tabAlarmManager.clearAlarm(tabId);
 
     const previousActiveId = this.previousActiveTabInWindow.get(windowId);
     this.planTabRemoval(previousActiveId);
@@ -47,15 +46,16 @@ export class OpenedTabManager implements IOpenedTabManager {
   }
 
   public onTabRemoved(tabId: TabId): void {
-    this.tabTimeoutManager.clearTimeout(tabId);
+    this.tabAlarmManager.clearAlarm(tabId);
   }
 
-  private async removeTab(tabId: number): Promise<void> {
+  private async removeTab(tabId: TabId): Promise<void> {
     const tab = await this.browserTabAPI.get(tabId);
 
-    if (this.canRemoveTab(tab)) {
+    if (await this.canRemoveTab(tab)) {
       await this.browserTabAPI.remove(tabId);
-      // TODO: add try/catch for cases when tab is already removed
+    } else if (!tab.active) {
+      await this.planTabRemoval(tabId);
     }
   }
 
@@ -64,23 +64,24 @@ export class OpenedTabManager implements IOpenedTabManager {
       return;
     }
 
-    const timeoutDuration =
-      (await this.configurationManager.get()).tabRemovalTimeoutMin ?? OpenedTabManager.TimeoutDurationMin;
+    const removeAfterMinutes = (await this.configurationManager.get()).tabRemovalDelayMin ?? OpenedTabManager.TimeoutDurationMin;
 
-    this.tabTimeoutManager.setTimeout(tabId, timeoutDuration * 60 * 1000, () => {
+    await this.tabAlarmManager.setAlarm(tabId, removeAfterMinutes, () => {
       this.removeTab(tabId);
     });
   }
 
-  private canRemoveTab(tab: Tab): boolean {
+  private async canRemoveTab(tab: Tab): Promise<boolean> {
     if (!tab || !tab.id) return false;
+
+    const configuration = await this.configurationManager.get();
 
     const errorOccurred = this.browserRuntimeAPI.getLastError();
     const isExcluded = this.excludedTabManager.isExcluded(tab.id);
-    const isPinned = tab.pinned;
     const isActive = tab.active;
-    const makesSound = tab.audible;
-    const isInGroup = tab.groupId != -1;
+    const makesSound = configuration.keepAudibleTabs && tab.audible;
+    const isInGroup = configuration.keepGroupedTabs && tab.groupId != -1;
+    const isPinned = configuration.keepPinnedTabs && tab.pinned;
 
     return !errorOccurred && !isExcluded && !isPinned && !isActive && !makesSound && !isInGroup;
   }

@@ -2,32 +2,26 @@ import { Tab, TabId, WindowId } from '../../src/types';
 import { IBrowserTabAPI } from '../../src/api/IBrowserTabAPI';
 import { IOpenedTabManager } from '../../src/managers/IOpenedTabManager';
 import { IExcludedTabManager } from '../../src/managers/IExcludedTabManager';
-import { ITabTimeoutManager } from '../../src/managers/ITabTimeoutManager';
 import { OpenedTabManager } from '../../src/managers/OpenedTabManager';
 import { IBrowserRuntimeAPI } from '../../src/api/IBrowserRuntimeAPI';
 import { IConfigurationManager } from '../../src/managers/IConfigurationManager';
+import { ITabAlarmManager } from '../../src/managers/ITabAlarmManager';
 
 describe('OpenedTabManager', () => {
   let openedTabManager: IOpenedTabManager;
   let browserRuntimeAPI: jasmine.SpyObj<IBrowserRuntimeAPI>;
   let browserTabAPI: jasmine.SpyObj<IBrowserTabAPI>;
-  let tabTimeoutManager: jasmine.SpyObj<ITabTimeoutManager>;
+  let tabAlarmManager: jasmine.SpyObj<ITabAlarmManager>;
   let excludedTabManager: jasmine.SpyObj<IExcludedTabManager>;
   let configurationManager: jasmine.SpyObj<IConfigurationManager>;
 
   beforeEach(() => {
     browserRuntimeAPI = jasmine.createSpyObj('BrowserRuntimeAPI', ['lastError']);
     browserTabAPI = jasmine.createSpyObj('BrowserTabAPI', ['get', 'query', 'remove']);
-    tabTimeoutManager = jasmine.createSpyObj('TabTimeoutManager', ['setTimeout', 'clearTimeout']);
+    tabAlarmManager = jasmine.createSpyObj('TabAlarmManager', ['setAlarm', 'clearAlarm']);
     excludedTabManager = jasmine.createSpyObj('ExcludedTabManager', ['isExcluded', 'exclude', 'include', 'toggle']);
     configurationManager = jasmine.createSpyObj('ConfigurationManager', ['get', 'save']);
-    openedTabManager = new OpenedTabManager(
-      browserRuntimeAPI,
-      browserTabAPI,
-      tabTimeoutManager,
-      excludedTabManager,
-      configurationManager
-    );
+    openedTabManager = new OpenedTabManager(browserRuntimeAPI, browserTabAPI, tabAlarmManager, excludedTabManager, configurationManager);
   });
 
   describe('onTabRemoved', () => {
@@ -36,7 +30,7 @@ describe('OpenedTabManager', () => {
 
       openedTabManager.onTabRemoved(tabId);
 
-      expect(tabTimeoutManager.clearTimeout).toHaveBeenCalledWith(tabId);
+      expect(tabAlarmManager.clearAlarm).toHaveBeenCalledWith(tabId);
     });
   });
 
@@ -47,7 +41,7 @@ describe('OpenedTabManager', () => {
 
       openedTabManager.onTabActivated({ windowId, tabId });
 
-      expect(tabTimeoutManager.clearTimeout).toHaveBeenCalledWith(tabId);
+      expect(tabAlarmManager.clearAlarm).toHaveBeenCalledWith(tabId);
     });
 
     it('should plan removal of the previous tab', () => {
@@ -60,11 +54,7 @@ describe('OpenedTabManager', () => {
 
       openedTabManager.onTabActivated({ windowId, tabId });
 
-      expect(tabTimeoutManager.setTimeout).toHaveBeenCalledWith(
-        initialTabId,
-        jasmine.any(Number),
-        jasmine.any(Function)
-      );
+      expect(tabAlarmManager.setAlarm).toHaveBeenCalledWith(initialTabId, jasmine.any(Number), jasmine.any(Function));
     });
 
     it("should not plan removal of the previous tab if it's pinned", () => {
@@ -78,7 +68,7 @@ describe('OpenedTabManager', () => {
 
       openedTabManager.onTabActivated({ windowId, tabId });
 
-      expect(tabTimeoutManager.setTimeout).not.toHaveBeenCalled();
+      expect(tabAlarmManager.setAlarm).not.toHaveBeenCalled();
     });
   });
 
@@ -88,7 +78,7 @@ describe('OpenedTabManager', () => {
 
       openedTabManager.onTabCreated(tab);
 
-      expect(tabTimeoutManager.setTimeout).toHaveBeenCalledWith(tab.id, jasmine.any(Number), jasmine.any(Function));
+      expect(tabAlarmManager.setAlarm).toHaveBeenCalledWith(tab.id, jasmine.any(Number), jasmine.any(Function));
     });
 
     it('should not plan removal of excluded tab', () => {
@@ -97,7 +87,7 @@ describe('OpenedTabManager', () => {
 
       openedTabManager.onTabCreated(tab);
 
-      expect(tabTimeoutManager.setTimeout).not.toHaveBeenCalled();
+      expect(tabAlarmManager.setAlarm).not.toHaveBeenCalled();
     });
   });
 

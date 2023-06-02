@@ -4,8 +4,6 @@ export type TabId = number;
 
 export type WindowId = number;
 
-export type TimeoutId = ReturnType<typeof setTimeout>;
-
 export type TabQueryInfo = chrome.tabs.QueryInfo;
 
 export type TabActiveInfo = chrome.tabs.TabActiveInfo;
@@ -26,4 +24,10 @@ export type TabActivatedEvent = chrome.tabs.TabActivatedEvent;
 
 export type TabRemovedEvent = chrome.tabs.TabRemovedEvent;
 
-export type CleanUpFunction = () => void;
+export type SimpleFunction = () => void;
+
+export type Alarm = chrome.alarms.Alarm;
+
+export type AlarmCreateInfo = chrome.alarms.AlarmCreateInfo;
+
+export type AlarmEvent = chrome.alarms.AlarmEvent;
