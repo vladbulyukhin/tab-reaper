@@ -31,22 +31,22 @@ export class OpenedTabManager implements IOpenedTabManager {
     }
   }
 
-  public onTabCreated(tab: Tab): void {
-    this.planTabRemoval(tab.id);
+  public async onTabCreated(tab: Tab): Promise<void> {
+    await this.planTabRemoval(tab.id);
   }
 
-  public onTabActivated(activeInfo: TabActiveInfo): void {
+  public async onTabActivated(activeInfo: TabActiveInfo): Promise<void> {
     const { windowId, tabId } = activeInfo;
-    this.tabAlarmManager.clearAlarm(tabId);
+    await this.tabAlarmManager.clearAlarm(tabId);
 
     const previousActiveId = this.previousActiveTabInWindow.get(windowId);
-    this.planTabRemoval(previousActiveId);
+    await this.planTabRemoval(previousActiveId);
 
     this.previousActiveTabInWindow.set(windowId, tabId);
   }
 
-  public onTabRemoved(tabId: TabId): void {
-    this.tabAlarmManager.clearAlarm(tabId);
+  public async onTabRemoved(tabId: TabId): Promise<void> {
+    await this.tabAlarmManager.clearAlarm(tabId);
   }
 
   private async removeTab(tabId: TabId): Promise<void> {
