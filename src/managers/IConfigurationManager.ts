@@ -7,5 +7,5 @@ export interface ConfigurationChange {
 
 export interface IConfigurationManager {
   get(): Promise<IConfiguration>;
-  save(configuration: IConfiguration): Promise<void>;
+  save(configuration: Partial<IConfiguration>): Promise<void>;
 }

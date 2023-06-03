@@ -19,7 +19,7 @@ export class ConfigurationManager implements IConfigurationManager {
 
   public async save(configuration: Partial<IConfiguration>): Promise<void> {
     this._configuration = { ...this._configuration, ...configuration };
-    return await this.browserStorageAPI.set({ configuration });
+    return await this.browserStorageAPI.set({ configuration: this._configuration });
   }
 
   private handleConfigurationChanged(changes: { [key: string]: ConfigurationChange }): void {
