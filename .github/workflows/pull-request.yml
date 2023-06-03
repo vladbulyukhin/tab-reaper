@@ -1,0 +1,48 @@
+﻿name: PR Validation
+
+on: [ pull_request ]
+
+jobs:
+  static-analysis:
+    name: Static analysis
+    runs-on: windows-latest
+    
+    strategy:
+      matrix:
+        node-version: [ 20.x ]
+    
+    steps:
+      - uses: actions/checkout@v2
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v1
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: Install dependencies
+        run: npm run ci -- --ignore-scripts
+      - name: Run ESLint
+        run: npm run lint
+      - name: Build
+        run: npm run build
+  
+  unit:
+    name: Unit tests
+    runs-on: windows-latest
+    
+    strategy:
+      matrix:
+        node-version: [ 20.x ]
+    
+    steps:
+      - uses: actions/checkout@v2
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v1
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: Use latest stable Chrome
+        uses: browser-actions/setup-chrome@latest
+        with:
+          chrome-version: stable
+      - name: Install dependencies
+        run: npm run ci -- --ignore-scripts
+      - name: Unit tests
+        run: npm run test:ci
