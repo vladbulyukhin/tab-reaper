@@ -9,11 +9,19 @@ import { OpenedTabManager } from './managers/OpenedTabManager';
 import { TabAlarmManager } from './managers/TabAlarmManager';
 import { BackgroundService } from './services/BackgroundService';
 import { chromeAlarmAPI } from './api/chromeAlarmAPI';
+import { chromeSessionStorageAPI } from './api/chromeSessionStorageAPI';
 
-const tabTimeoutManager = new TabAlarmManager(chromeAlarmAPI);
-const extensionIconService = new ExtensionActionManager(chromeActionAPI);
-const excludedTabManager = new ExcludedTabManager(extensionIconService);
+const tabAlarmManager = new TabAlarmManager(chromeAlarmAPI);
+const extensionActionManager = new ExtensionActionManager(chromeActionAPI);
+const excludedTabManager = new ExcludedTabManager(chromeSessionStorageAPI, extensionActionManager);
 const configurationManager = new ConfigurationManager(chromeSyncStorageAPI);
-const openedTabManager = new OpenedTabManager(chromeRuntimeAPI, chromeTabAPI, tabTimeoutManager, excludedTabManager, configurationManager);
+const openedTabManager = new OpenedTabManager(
+  chromeRuntimeAPI,
+  chromeTabAPI,
+  chromeSessionStorageAPI,
+  tabAlarmManager,
+  excludedTabManager,
+  configurationManager
+);
 
 new BackgroundService(chromeRuntimeAPI, chromeTabAPI, chromeActionAPI, openedTabManager, excludedTabManager).start();

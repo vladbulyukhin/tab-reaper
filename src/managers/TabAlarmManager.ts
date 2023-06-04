@@ -1,37 +1,41 @@
 import { IBrowserAlarmAPI } from '../api/IBrowserAlarmAPI';
-import { Alarm, SimpleFunction, TabId } from '../types';
+import { TabId } from '../types';
 import { ITabAlarmManager } from './ITabAlarmManager';
 
+export type TabAlarmName = `tab:${TabId}`;
+
 export class TabAlarmManager implements ITabAlarmManager {
-  private callbacks: Map<string, SimpleFunction> = new Map();
+  constructor(private readonly _browserAlarmAPI: IBrowserAlarmAPI) {}
 
-  constructor(private readonly browserAlarmAPI: IBrowserAlarmAPI) {
-    this.browserAlarmAPI.onAlarm.addListener(this.handleAlarm.bind(this));
-  }
-
-  public async setAlarm(tabId: TabId, delayInMinutes: number, callback: () => void): Promise<void> {
+  public async setAlarm(tabId: TabId, delayInMinutes: number): Promise<void> {
     const alarmName = TabAlarmManager.getAlarmName(tabId);
-
-    await this.browserAlarmAPI.clear(alarmName);
-    await this.browserAlarmAPI.create(alarmName, { delayInMinutes: delayInMinutes });
-
-    this.callbacks.set(alarmName, callback);
+    await this._browserAlarmAPI.clear(alarmName);
+    await this._browserAlarmAPI.create(alarmName, { delayInMinutes: delayInMinutes });
   }
 
   public async clearAlarm(tabId: TabId): Promise<void> {
     const alarmName = TabAlarmManager.getAlarmName(tabId);
-    await this.browserAlarmAPI.clear(alarmName);
-    this.callbacks.delete(alarmName);
+    await this._browserAlarmAPI.clear(alarmName);
   }
 
-  private handleAlarm(alarm: Alarm): void {
-    const callback = this.callbacks.get(alarm.name);
-    if (typeof callback === 'function') {
-      callback();
-    }
+  public onAlarm(callback: (tabId: TabId) => void): void {
+    this._browserAlarmAPI.onAlarm.addListener((alarm) => {
+      if (TabAlarmManager.isTabAlarmName(alarm.name)) {
+        const tabId = TabAlarmManager.getTabId(alarm.name);
+        callback(tabId);
+      }
+    });
   }
 
-  private static getAlarmName(tabId: TabId) {
-    return tabId.toString();
+  private static getAlarmName(tabId: TabId): TabAlarmName {
+    return `tab:${tabId}`;
+  }
+
+  private static getTabId(alarmName: TabAlarmName): TabId {
+    return parseInt(alarmName.split(':')[1], 10);
+  }
+
+  private static isTabAlarmName(alarmName: string): alarmName is TabAlarmName {
+    return alarmName.startsWith('tab:');
   }
 }
