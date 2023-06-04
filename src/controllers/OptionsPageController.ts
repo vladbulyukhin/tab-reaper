@@ -6,6 +6,7 @@ export class OptionsPageController implements IPageController {
   private $audibleTabCheckbox: HTMLInputElement;
   private $delayInput: HTMLInputElement;
   private $groupedTabCheckbox: HTMLInputElement;
+  private $limitInput: HTMLInputElement;
   private $pinnedTabCheckbox: HTMLInputElement;
   private $saveButton: HTMLButtonElement;
   private $savedMessage: HTMLParagraphElement;
@@ -24,6 +25,7 @@ export class OptionsPageController implements IPageController {
     this.$audibleTabCheckbox = OptionsPageController.getPageElementById<HTMLInputElement>('audible-tabs', HTMLInputElement);
     this.$delayInput = OptionsPageController.getPageElementById<HTMLInputElement>('inactivity-minutes', HTMLInputElement);
     this.$groupedTabCheckbox = OptionsPageController.getPageElementById<HTMLInputElement>('grouped-tabs', HTMLInputElement);
+    this.$limitInput = OptionsPageController.getPageElementById<HTMLInputElement>('tab-limit', HTMLInputElement);
     this.$pinnedTabCheckbox = OptionsPageController.getPageElementById<HTMLInputElement>('pinned-tabs', HTMLInputElement);
     this.$saveButton = OptionsPageController.getPageElementById<HTMLButtonElement>('save', HTMLButtonElement);
     this.$savedMessage = OptionsPageController.getPageElementById<HTMLParagraphElement>('saved-message', HTMLParagraphElement);
@@ -32,6 +34,7 @@ export class OptionsPageController implements IPageController {
       !this.$audibleTabCheckbox ||
       !this.$delayInput ||
       !this.$groupedTabCheckbox ||
+      !this.$limitInput ||
       !this.$pinnedTabCheckbox ||
       !this.$saveButton ||
       !this.$savedMessage
@@ -47,6 +50,7 @@ export class OptionsPageController implements IPageController {
     const configuration = await this.configurationManager.get();
 
     this.$delayInput.value = String(configuration.tabRemovalDelayMin);
+    this.$limitInput.value = String(configuration.tabLimit);
     this.$audibleTabCheckbox.checked = configuration.keepAudibleTabs;
     this.$groupedTabCheckbox.checked = configuration.keepGroupedTabs;
     this.$pinnedTabCheckbox.checked = configuration.keepPinnedTabs;
@@ -57,6 +61,7 @@ export class OptionsPageController implements IPageController {
       keepAudibleTabs: this.$audibleTabCheckbox.checked,
       keepGroupedTabs: this.$groupedTabCheckbox.checked,
       keepPinnedTabs: this.$pinnedTabCheckbox.checked,
+      tabLimit: parseInt(this.$limitInput.value, 10),
       tabRemovalDelayMin: parseInt(this.$delayInput.value, 10),
     });
 
@@ -77,6 +82,7 @@ export class OptionsPageController implements IPageController {
     const dependencies: ReadonlyArray<HTMLElement> = [
       this.$audibleTabCheckbox,
       this.$delayInput,
+      this.$limitInput,
       this.$groupedTabCheckbox,
       this.$pinnedTabCheckbox,
     ];
@@ -89,6 +95,7 @@ export class OptionsPageController implements IPageController {
           configuration.keepAudibleTabs !== this.$audibleTabCheckbox.checked ||
           configuration.keepGroupedTabs !== this.$groupedTabCheckbox.checked ||
           configuration.keepPinnedTabs !== this.$pinnedTabCheckbox.checked ||
+          String(configuration.tabLimit) !== this.$limitInput.value ||
           String(configuration.tabRemovalDelayMin) !== this.$delayInput.value
         );
       });

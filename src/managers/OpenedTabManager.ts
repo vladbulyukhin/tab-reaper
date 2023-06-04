@@ -9,6 +9,7 @@ import { IConfigurationManager } from './IConfigurationManager';
 export class OpenedTabManager implements IOpenedTabManager {
   private static TimeoutDurationMin = 15;
   private previousActiveTabInWindow: Map<WindowId, TabId> = new Map();
+  private tabQueueByWindow: Map<WindowId, Array<TabId>> = new Map();
 
   constructor(
     private readonly browserRuntimeAPI: IBrowserRuntimeAPI,
@@ -33,6 +34,7 @@ export class OpenedTabManager implements IOpenedTabManager {
 
   public async onTabCreated(tab: Tab): Promise<void> {
     await this.planTabRemoval(tab.id);
+    await this.recalculateQueue(tab.windowId, tab.id);
   }
 
   public async onTabActivated(activeInfo: TabActiveInfo): Promise<void> {
@@ -57,6 +59,26 @@ export class OpenedTabManager implements IOpenedTabManager {
     } else if (!tab.active) {
       await this.planTabRemoval(tabId);
     }
+  }
+
+  private async recalculateQueue(windowId: WindowId, tabId: TabId): Promise<void> {
+    const configuration = await this.configurationManager.get();
+    const queue = this.tabQueueByWindow.get(windowId) ?? [];
+
+    if (!configuration.tabLimit) {
+      return;
+    }
+
+    if (queue.includes(tabId)) {
+      const index = queue.indexOf(tabId);
+      queue.splice(index, 1);
+    } else if (queue.length >= configuration.tabLimit) {
+      const tabToRemove = queue.shift();
+      await this.browserTabAPI.remove(tabToRemove);
+    }
+
+    queue.push(tabId);
+    this.tabQueueByWindow.set(windowId, queue);
   }
 
   private async planTabRemoval(tabId: TabId | undefined): Promise<void> {

@@ -16,11 +16,29 @@
             max="1440"
             class="w-20 flex-grow py-2 px-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
-          <label for="inactivity-minutes" class="ml-2">min</label>
+          <label for="inactivity-minutes" class="ml-2 w-5">min</label>
         </div>
       </div>
       <p class="text-gray-500 text-sm">
         The number of minutes since the tab was last active after which the inactive tab will be closed.
+      </p>
+    </div>
+
+    <div class="flex flex-col mb-4">
+      <div class="flex items-center justify-between mb-1">
+        <label for="tab-limit" class="block font-medium mb-2">Tab limit (experimental):</label>
+        <div class="flex items-center">
+          <input
+            id="tab-limit"
+            type="number"
+            min="0"
+            class="w-20 flex-grow py-2 px-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
+          <label for="inactivity-minutes" class="ml-2 w-5">tabs</label>
+        </div>
+      </div>
+      <p class="text-gray-500 text-sm">
+        The maximum number of tabs that can be opened in one window at the same time. Setting it to 0 will disable this feature.
       </p>
     </div>
 

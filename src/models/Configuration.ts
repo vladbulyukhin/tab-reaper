@@ -1,5 +1,6 @@
 export interface IConfiguration {
-  readonly version: '0.0.1';
+  readonly version: '0.0.2';
+  readonly tabLimit: number;
   readonly tabRemovalDelayMin: number;
   readonly keepPinnedTabs: boolean;
   readonly keepGroupedTabs: boolean;
@@ -7,7 +8,8 @@ export interface IConfiguration {
 }
 
 export const emptyConfiguration: IConfiguration = {
-  version: '0.0.1',
+  version: '0.0.2',
+  tabLimit: 0,
   tabRemovalDelayMin: 30,
   keepPinnedTabs: true,
   keepGroupedTabs: true,
@@ -17,6 +19,7 @@ export const emptyConfiguration: IConfiguration = {
 export const toConfiguration = (obj: Partial<IConfiguration>): IConfiguration => ({
   ...emptyConfiguration,
   version: obj.version ?? emptyConfiguration.version,
+  tabLimit: obj.tabLimit ?? emptyConfiguration.tabLimit,
   tabRemovalDelayMin: obj.tabRemovalDelayMin ?? emptyConfiguration.tabRemovalDelayMin,
   keepPinnedTabs: obj.keepPinnedTabs ?? emptyConfiguration.keepPinnedTabs,
   keepGroupedTabs: obj.keepGroupedTabs ?? emptyConfiguration.keepGroupedTabs,
