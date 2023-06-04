@@ -7,7 +7,11 @@
 
 # Tab Reaper: Idle Tab Collector
 
-Tab Reaper is an <strong>open-source</strong> Chrome extension that automatically closes idle tabs, freeing up clutter and
+![licence](https://img.shields.io/github/license/vladbulyukhin/tab-reaper)
+[![chrome](https://img.shields.io/chrome-web-store/v/lpdcbkckljbnkjbajmjhehdilncjjgii)](https://chrome.google.com/webstore/detail/tab-reaper-idle-tab-colle/lpdcbkckljbnkjbajmjhehdilncjjgii)
+
+
+Tab Reaper is an <strong>open-source</strong> [Chrome extension](https://chrome.google.com/webstore/detail/tab-reaper-idle-tab-colle/lpdcbkckljbnkjbajmjhehdilncjjgii) that automatically closes idle tabs, freeing up clutter and
 helping you stay focused on what matters most. Say goodbye to tab overload and hello to a clean,
 organized browsing experience.
 
