@@ -2,14 +2,15 @@
   <img src="./src/icons/icon-active-96.png" />
 </p>
 <p align="center">
+  <img src="https://img.shields.io/github/license/vladbulyukhin/tab-reaper" alt="licence" />
+  <a href="https://chrome.google.com/webstore/detail/tab-reaper-idle-tab-colle/lpdcbkckljbnkjbajmjhehdilncjjgii"><img src="https://img.shields.io/chrome-web-store/v/lpdcbkckljbnkjbajmjhehdilncjjgii" alt="chrome store" /></a>
+</p>
+<p align="center">
     Tab Reaper identifies tabs that haven't been used for a while and closes them, ensuring a <strong>clutter-free workspace</strong>.
 </p>
 
+
 # Tab Reaper: Idle Tab Collector
-
-![licence](https://img.shields.io/github/license/vladbulyukhin/tab-reaper)
-[![chrome](https://img.shields.io/chrome-web-store/v/lpdcbkckljbnkjbajmjhehdilncjjgii)](https://chrome.google.com/webstore/detail/tab-reaper-idle-tab-colle/lpdcbkckljbnkjbajmjhehdilncjjgii)
-
 
 Tab Reaper is an <strong>open-source</strong> [Chrome extension](https://chrome.google.com/webstore/detail/tab-reaper-idle-tab-colle/lpdcbkckljbnkjbajmjhehdilncjjgii) that automatically closes idle tabs, freeing up clutter and
 helping you stay focused on what matters most. Say goodbye to tab overload and hello to a clean,
