@@ -16,32 +16,35 @@ describe('TabAlarmManager', () => {
   });
 
   describe('setAlarm', () => {
-    it('should set alarm and register a callback', async () => {
+    it('should set alarm', async () => {
       const tabId: TabId = 10;
       const delay = 5;
-      const spy = jasmine.createSpy('alarmCallback');
 
-      await tabAlarmManager.setAlarm(tabId, delay, spy);
-      expect(browserAlarmAPI.create).toHaveBeenCalledOnceWith(tabId.toString(), { delayInMinutes: delay });
-
-      (browserAlarmAPI.onAlarm.addListener as jasmine.Spy).calls.mostRecent().args[0]({ name: tabId.toString() });
-      expect(spy).toHaveBeenCalledTimes(1);
+      await tabAlarmManager.setAlarm(tabId, delay);
+      expect(browserAlarmAPI.create).toHaveBeenCalledOnceWith(`tab:${tabId}`, { delayInMinutes: delay });
     });
 
-    it('should clear previously set alarm and callback', async () => {
+    it('should clear previously set alarm', async () => {
       const tabId: TabId = 10;
       const delay = 5;
 
-      const oldSpy = jasmine.createSpy('oldAlarmCallback');
-      await tabAlarmManager.setAlarm(tabId, delay, oldSpy);
+      await tabAlarmManager.setAlarm(tabId, delay);
       browserAlarmAPI.clear.calls.reset();
 
-      const newSpy = jasmine.createSpy('newAlarmCallback');
-      await tabAlarmManager.setAlarm(tabId, delay, newSpy);
-      expect(browserAlarmAPI.clear).toHaveBeenCalledWith(tabId.toString());
+      await tabAlarmManager.setAlarm(tabId, delay);
+      expect(browserAlarmAPI.clear).toHaveBeenCalledWith(`tab:${tabId}`);
+    });
+  });
 
-      (browserAlarmAPI.onAlarm.addListener as jasmine.Spy).calls.mostRecent().args[0]({ name: tabId.toString() });
-      expect(oldSpy).toHaveBeenCalledTimes(0);
+  describe('onAlarm', () => {
+    it('should add alarm listener', async () => {
+      const tabId: TabId = 10;
+      const spy = jasmine.createSpy('alarmCallback');
+
+      await tabAlarmManager.onAlarm(spy);
+
+      (browserAlarmAPI.onAlarm.addListener as jasmine.Spy).calls.mostRecent().args[0]({ name: `tab:${tabId}` });
+      expect(spy).toHaveBeenCalledOnceWith(tabId);
     });
   });
 });

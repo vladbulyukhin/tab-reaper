@@ -7,22 +7,33 @@ import { IBrowserRuntimeAPI } from '../../src/api/IBrowserRuntimeAPI';
 import { IConfigurationManager } from '../../src/managers/IConfigurationManager';
 import { ITabAlarmManager } from '../../src/managers/ITabAlarmManager';
 import { emptyConfiguration } from '../../src/models/Configuration';
+import { IBrowserStorageAPI } from '../../src/api/IBrowserStorageAPI';
 
 describe('OpenedTabManager', () => {
   let openedTabManager: IOpenedTabManager;
   let browserRuntimeAPI: jasmine.SpyObj<IBrowserRuntimeAPI>;
   let browserTabAPI: jasmine.SpyObj<IBrowserTabAPI>;
+  let browserStorageAPI: jasmine.SpyObj<IBrowserStorageAPI>;
   let tabAlarmManager: jasmine.SpyObj<ITabAlarmManager>;
   let excludedTabManager: jasmine.SpyObj<IExcludedTabManager>;
   let configurationManager: jasmine.SpyObj<IConfigurationManager>;
 
   beforeEach(() => {
+    browserStorageAPI = createBrowserStorageAPIStub();
+
     browserRuntimeAPI = jasmine.createSpyObj('BrowserRuntimeAPI', ['lastError']);
     browserTabAPI = jasmine.createSpyObj('BrowserTabAPI', ['get', 'query', 'remove']);
-    tabAlarmManager = jasmine.createSpyObj('TabAlarmManager', ['setAlarm', 'clearAlarm']);
+    tabAlarmManager = jasmine.createSpyObj('TabAlarmManager', ['setAlarm', 'clearAlarm', 'onAlarm']);
     excludedTabManager = jasmine.createSpyObj('ExcludedTabManager', ['isExcluded', 'exclude', 'include', 'toggle']);
     configurationManager = jasmine.createSpyObj('ConfigurationManager', ['get', 'save']);
-    openedTabManager = new OpenedTabManager(browserRuntimeAPI, browserTabAPI, tabAlarmManager, excludedTabManager, configurationManager);
+    openedTabManager = new OpenedTabManager(
+      browserRuntimeAPI,
+      browserTabAPI,
+      browserStorageAPI,
+      tabAlarmManager,
+      excludedTabManager,
+      configurationManager
+    );
 
     configurationManager.get.and.returnValue(Promise.resolve(emptyConfiguration));
   });
@@ -57,7 +68,7 @@ describe('OpenedTabManager', () => {
 
       await openedTabManager.onTabActivated({ windowId, tabId });
 
-      expect(tabAlarmManager.setAlarm).toHaveBeenCalledWith(initialTabId, jasmine.any(Number), jasmine.any(Function));
+      expect(tabAlarmManager.setAlarm).toHaveBeenCalledWith(initialTabId, emptyConfiguration.tabRemovalDelayMin);
     });
 
     it("should not plan removal of the previous tab if it's pinned", async () => {
@@ -67,7 +78,7 @@ describe('OpenedTabManager', () => {
       await openedTabManager.onTabActivated({ windowId, tabId: initialTabId });
 
       const tabId: TabId = 3;
-      excludedTabManager.isExcluded.and.returnValue(true);
+      excludedTabManager.isExcluded.and.returnValue(Promise.resolve(true));
 
       await openedTabManager.onTabActivated({ windowId, tabId });
 
@@ -81,12 +92,12 @@ describe('OpenedTabManager', () => {
 
       await openedTabManager.onTabCreated(tab);
 
-      expect(tabAlarmManager.setAlarm).toHaveBeenCalledWith(tab.id, jasmine.any(Number), jasmine.any(Function));
+      expect(tabAlarmManager.setAlarm).toHaveBeenCalledWith(tab.id, jasmine.any(Number));
     });
 
     it('should not plan removal of excluded tab', async () => {
       const tab = createTestTab();
-      excludedTabManager.isExcluded.and.returnValue(true);
+      excludedTabManager.isExcluded.and.returnValue(Promise.resolve(true));
 
       await openedTabManager.onTabCreated(tab);
 
@@ -108,5 +119,14 @@ describe('OpenedTabManager', () => {
       selected: false,
       windowId: 0,
     };
+  }
+
+  function createBrowserStorageAPIStub(): jasmine.SpyObj<IBrowserStorageAPI> {
+    const stub = jasmine.createSpyObj('BrowserStorageAPI', ['onChanged', 'clear', 'get', 'remove', 'set']);
+    stub.onChanged = jasmine.createSpyObj('BrowserAlarmEvent', ['addListener']);
+    stub.onChanged.addListener = jasmine.createSpy('addListener');
+    stub.get.and.returnValue(Promise.resolve({ previousActiveTabByWindow: {} }));
+
+    return stub;
   }
 });

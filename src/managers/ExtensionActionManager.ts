@@ -17,19 +17,19 @@ const enabledIconPaths = {
 };
 
 export class ExtensionActionManager implements IExtensionActionManager {
-  constructor(private readonly extensionActionAPI: IBrowserExtensionActionAPI) {}
+  constructor(private readonly _extensionActionAPI: IBrowserExtensionActionAPI) {}
 
   public async disableExtensionIcon(tabId?: TabId): Promise<void[]> {
     return Promise.all([
-      this.extensionActionAPI.setTitle({ tabId, title: 'Tab Reaper (off)' }),
-      this.extensionActionAPI.setIcon({ tabId, path: disabledIconPaths }),
+      this._extensionActionAPI.setTitle({ tabId, title: 'Tab Reaper (off)' }),
+      this._extensionActionAPI.setIcon({ tabId, path: disabledIconPaths }),
     ]);
   }
 
   public async enableExtensionIcon(tabId?: number): Promise<void[]> {
     return Promise.all([
-      this.extensionActionAPI.setTitle({ tabId, title: 'Tab Reaper' }),
-      this.extensionActionAPI.setIcon({ tabId, path: enabledIconPaths }),
+      this._extensionActionAPI.setTitle({ tabId, title: 'Tab Reaper' }),
+      this._extensionActionAPI.setIcon({ tabId, path: enabledIconPaths }),
     ]);
   }
 }

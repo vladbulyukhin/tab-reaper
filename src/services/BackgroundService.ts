@@ -8,11 +8,11 @@ import { IBackgroundService } from './IBackgroundService';
 
 export class BackgroundService implements IBackgroundService {
   constructor(
-    private readonly browserRuntimeAPI: IBrowserRuntimeAPI,
-    private readonly browserTabAPI: IBrowserTabAPI,
-    private readonly browserActionAPI: IBrowserExtensionActionAPI,
-    private readonly openedTabManager: IOpenedTabManager,
-    private readonly excludedTabManager: IExcludedTabManager
+    private readonly _browserRuntimeAPI: IBrowserRuntimeAPI,
+    private readonly _browserTabAPI: IBrowserTabAPI,
+    private readonly _browserActionAPI: IBrowserExtensionActionAPI,
+    private readonly _openedTabManager: IOpenedTabManager,
+    private readonly _excludedTabManager: IExcludedTabManager
   ) {}
 
   public start(): void {
@@ -22,20 +22,20 @@ export class BackgroundService implements IBackgroundService {
   }
 
   private addRuntimeEventListeners(): void {
-    this.browserRuntimeAPI.onInstalled.addListener(this.openedTabManager.watchAllTabs);
-    this.browserRuntimeAPI.onStartup.addListener(this.openedTabManager.watchAllTabs);
+    this._browserRuntimeAPI.onInstalled.addListener(this._openedTabManager.watchAllTabs);
+    this._browserRuntimeAPI.onStartup.addListener(this._openedTabManager.watchAllTabs);
   }
 
   private addActionEventListeners(): void {
-    this.browserActionAPI.onClicked.addListener((tab: Tab) => {
+    this._browserActionAPI.onClicked.addListener((tab: Tab) => {
       if (!tab.id) return;
-      this.excludedTabManager.toggle(tab.id);
+      this._excludedTabManager.toggle(tab.id);
     });
   }
 
   private addTabEventListeners(): void {
-    this.browserTabAPI.onCreated.addListener(this.openedTabManager.onTabCreated);
-    this.browserTabAPI.onActivated.addListener(this.openedTabManager.onTabActivated);
-    this.browserTabAPI.onRemoved.addListener(this.openedTabManager.onTabRemoved);
+    this._browserTabAPI.onCreated.addListener(this._openedTabManager.onTabCreated);
+    this._browserTabAPI.onActivated.addListener(this._openedTabManager.onTabActivated);
+    this._browserTabAPI.onRemoved.addListener(this._openedTabManager.onTabRemoved);
   }
 }

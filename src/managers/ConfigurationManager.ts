@@ -1,32 +1,21 @@
 import { IBrowserStorageAPI } from '../api/IBrowserStorageAPI';
-import { IConfiguration, emptyConfiguration, toConfiguration } from '../models/Configuration';
-import { ConfigurationChange, IConfigurationManager } from './IConfigurationManager';
+import { emptyConfiguration, IConfiguration, toConfiguration } from '../models/Configuration';
+import { IConfigurationManager } from './IConfigurationManager';
+import { CachedValue } from '../helpers/CachedValue';
 
 export class ConfigurationManager implements IConfigurationManager {
-  private _configuration: IConfiguration;
+  private static readonly StorageKey: string = 'configuration';
+  private readonly _configuration: CachedValue<IConfiguration>;
 
-  constructor(private readonly browserStorageAPI: IBrowserStorageAPI) {
-    this.browserStorageAPI.onChanged.addListener(this.handleConfigurationChanged.bind(this));
+  constructor(private readonly _browserStorageAPI: IBrowserStorageAPI) {
+    this._configuration = new CachedValue<IConfiguration>(this._browserStorageAPI, ConfigurationManager.StorageKey, emptyConfiguration);
   }
 
   public async get(): Promise<IConfiguration> {
-    if (!this._configuration) {
-      const storage: any = await this.browserStorageAPI.get({ configuration: emptyConfiguration });
-      this._configuration = toConfiguration(storage.configuration);
-    }
-    return this._configuration;
+    return toConfiguration(await this._configuration.get());
   }
 
   public async save(configuration: Partial<IConfiguration>): Promise<void> {
-    this._configuration = { ...this._configuration, ...configuration };
-    return await this.browserStorageAPI.set({ configuration: this._configuration });
-  }
-
-  private handleConfigurationChanged(changes: { [key: string]: ConfigurationChange }): void {
-    if ('configuration' in changes) {
-      if (changes.configuration.newValue) {
-        this._configuration = toConfiguration(changes.configuration.newValue);
-      }
-    }
+    return await this._configuration.put(toConfiguration(configuration));
   }
 }
