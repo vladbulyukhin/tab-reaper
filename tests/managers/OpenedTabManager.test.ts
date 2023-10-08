@@ -1,3 +1,5 @@
+import { beforeEach, describe, expect, it } from 'vitest';
+import { DeepMockProxy, mockDeep } from 'vitest-mock-extended';
 import { Tab, TabId, WindowId } from '../../src/types';
 import { IBrowserTabAPI } from '../../src/api/IBrowserTabAPI';
 import { IOpenedTabManager } from '../../src/managers/IOpenedTabManager';
@@ -11,31 +13,33 @@ import { IBrowserStorageAPI } from '../../src/api/IBrowserStorageAPI';
 
 describe('OpenedTabManager', () => {
   let openedTabManager: IOpenedTabManager;
-  let browserRuntimeAPI: jasmine.SpyObj<IBrowserRuntimeAPI>;
-  let browserTabAPI: jasmine.SpyObj<IBrowserTabAPI>;
-  let browserStorageAPI: jasmine.SpyObj<IBrowserStorageAPI>;
-  let tabAlarmManager: jasmine.SpyObj<ITabAlarmManager>;
-  let excludedTabManager: jasmine.SpyObj<IExcludedTabManager>;
-  let configurationManager: jasmine.SpyObj<IConfigurationManager>;
+  let browserRuntimeAPI: DeepMockProxy<IBrowserRuntimeAPI>;
+  let browserTabAPI: DeepMockProxy<IBrowserTabAPI>;
+  let browserStorageAPI: DeepMockProxy<IBrowserStorageAPI>;
+  let tabAlarmManager: DeepMockProxy<ITabAlarmManager>;
+  let excludedTabManager: DeepMockProxy<IExcludedTabManager>;
+  let configurationManager: DeepMockProxy<IConfigurationManager>;
 
   beforeEach(() => {
-    browserStorageAPI = createBrowserStorageAPIStub();
+    browserStorageAPI = mockDeep<IBrowserStorageAPI>();
+    browserStorageAPI.get.mockReturnValue(Promise.resolve({ previousActiveTabByWindow: {} }));
 
-    browserRuntimeAPI = jasmine.createSpyObj('BrowserRuntimeAPI', ['lastError']);
-    browserTabAPI = jasmine.createSpyObj('BrowserTabAPI', ['get', 'query', 'remove']);
-    tabAlarmManager = jasmine.createSpyObj('TabAlarmManager', ['setAlarm', 'clearAlarm', 'onAlarm']);
-    excludedTabManager = jasmine.createSpyObj('ExcludedTabManager', ['isExcluded', 'exclude', 'include', 'toggle']);
-    configurationManager = jasmine.createSpyObj('ConfigurationManager', ['get', 'save']);
+    browserRuntimeAPI = mockDeep<IBrowserRuntimeAPI>();
+    browserTabAPI = mockDeep<IBrowserTabAPI>();
+    tabAlarmManager = mockDeep<ITabAlarmManager>();
+    excludedTabManager = mockDeep<IExcludedTabManager>();
+
+    configurationManager = mockDeep<IConfigurationManager>();
+    configurationManager.get.mockReturnValue(Promise.resolve(emptyConfiguration));
+
     openedTabManager = new OpenedTabManager(
       browserRuntimeAPI,
       browserTabAPI,
       browserStorageAPI,
       tabAlarmManager,
       excludedTabManager,
-      configurationManager
+      configurationManager,
     );
-
-    configurationManager.get.and.returnValue(Promise.resolve(emptyConfiguration));
   });
 
   describe('onTabRemoved', () => {
@@ -71,14 +75,14 @@ describe('OpenedTabManager', () => {
       expect(tabAlarmManager.setAlarm).toHaveBeenCalledWith(initialTabId, emptyConfiguration.tabRemovalDelayMin);
     });
 
-    it("should not plan removal of the previous tab if it's pinned", async () => {
+    it('should not plan removal of the previous tab if it\'s pinned', async () => {
       const windowId: WindowId = 1;
       const initialTabId: TabId = 2;
 
       await openedTabManager.onTabActivated({ windowId, tabId: initialTabId });
 
       const tabId: TabId = 3;
-      excludedTabManager.isExcluded.and.returnValue(Promise.resolve(true));
+      excludedTabManager.isExcluded.mockReturnValue(Promise.resolve(true));
 
       await openedTabManager.onTabActivated({ windowId, tabId });
 
@@ -92,12 +96,12 @@ describe('OpenedTabManager', () => {
 
       await openedTabManager.onTabCreated(tab);
 
-      expect(tabAlarmManager.setAlarm).toHaveBeenCalledWith(tab.id, jasmine.any(Number));
+      expect(tabAlarmManager.setAlarm).toHaveBeenCalledWith(tab.id, expect.any(Number));
     });
 
     it('should not plan removal of excluded tab', async () => {
       const tab = createTestTab();
-      excludedTabManager.isExcluded.and.returnValue(Promise.resolve(true));
+      excludedTabManager.isExcluded.mockReturnValue(Promise.resolve(true));
 
       await openedTabManager.onTabCreated(tab);
 
@@ -119,14 +123,5 @@ describe('OpenedTabManager', () => {
       selected: false,
       windowId: 0,
     };
-  }
-
-  function createBrowserStorageAPIStub(): jasmine.SpyObj<IBrowserStorageAPI> {
-    const stub = jasmine.createSpyObj('BrowserStorageAPI', ['onChanged', 'clear', 'get', 'remove', 'set']);
-    stub.onChanged = jasmine.createSpyObj('BrowserAlarmEvent', ['addListener']);
-    stub.onChanged.addListener = jasmine.createSpy('addListener');
-    stub.get.and.returnValue(Promise.resolve({ previousActiveTabByWindow: {} }));
-
-    return stub;
   }
 });

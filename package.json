@@ -14,33 +14,27 @@
     "lint": "eslint {src,tests}/**/*.{js,ts,tsx}",
     "lint:fix": "npm run lint -- --fix",
     "start": "vite",
-    "test": "karma start karma.conf.js",
-    "test:ci": "npm run test -- --single-run --browsers ChromeHeadless"
+    "test": "vitest",
+    "test:ci": "npm run test -- --run"
   },
   "keywords": [],
   "author": "Vladislav Bulyukhin <vladislav.bulyukhin@gmail.com>",
   "license": "GPL-3.0",
   "devDependencies": {
+    "@crxjs/vite-plugin": "^2.0.0-beta.19",
     "@types/chrome": "^0.0.235",
-    "@types/jasmine": "^4.3.1",
     "@typescript-eslint/eslint-plugin": "^5.59.5",
     "@typescript-eslint/parser": "^5.59.5",
     "eslint": "^8.40.0",
     "eslint-config-prettier": "^8.8.0",
     "eslint-plugin-prettier": "^4.2.1",
-    "jasmine-core": "^4.6.0",
-    "karma": "^6.4.2",
-    "karma-chrome-launcher": "^3.2.0",
-    "karma-cli": "^2.0.0",
-    "karma-jasmine": "^5.1.0",
-    "karma-jasmine-html-reporter": "^2.0.0",
-    "karma-typescript": "^5.5.4",
     "postcss": "^8.4.24",
     "prettier": "^2.8.8",
     "rimraf": "^5.0.1",
     "tailwindcss": "^3.3.2",
-    "@crxjs/vite-plugin": "^2.0.0-beta.19",
     "vite": "^4.4.11",
-    "vite-tsconfig-paths": "^4.2.1"
+    "vite-tsconfig-paths": "^4.2.1",
+    "vitest": "^0.34.6",
+    "vitest-mock-extended": "^1.3.1"
   }
 }
