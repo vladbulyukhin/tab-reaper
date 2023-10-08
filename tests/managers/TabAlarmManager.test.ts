@@ -1,17 +1,16 @@
-﻿import { ITabAlarmManager } from '../../src/managers/ITabAlarmManager';
+﻿import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { DeepMockProxy, mockDeep } from 'vitest-mock-extended';
+import { ITabAlarmManager } from '../../src/managers/ITabAlarmManager';
 import { IBrowserAlarmAPI } from '../../src/api/IBrowserAlarmAPI';
 import { TabAlarmManager } from '../../src/managers/TabAlarmManager';
 import { TabId } from '../../src/types';
 
 describe('TabAlarmManager', () => {
   let tabAlarmManager: ITabAlarmManager;
-  let browserAlarmAPI: jasmine.SpyObj<IBrowserAlarmAPI>;
+  let browserAlarmAPI: DeepMockProxy<IBrowserAlarmAPI>;
 
   beforeEach(() => {
-    browserAlarmAPI = jasmine.createSpyObj('BrowserAlarmAPI', ['create', 'clear', 'onAlarm']);
-    browserAlarmAPI.onAlarm = jasmine.createSpyObj('BrowserAlarmEvent', ['addListener']);
-    browserAlarmAPI.onAlarm.addListener = jasmine.createSpy('addListener');
-
+    browserAlarmAPI = mockDeep<IBrowserAlarmAPI>();
     tabAlarmManager = new TabAlarmManager(browserAlarmAPI);
   });
 
@@ -21,7 +20,7 @@ describe('TabAlarmManager', () => {
       const delay = 5;
 
       await tabAlarmManager.setAlarm(tabId, delay);
-      expect(browserAlarmAPI.create).toHaveBeenCalledOnceWith(`tab:${tabId}`, { delayInMinutes: delay });
+      expect(browserAlarmAPI.create).toHaveBeenCalledWith(`tab:${tabId}`, { delayInMinutes: delay });
     });
 
     it('should clear previously set alarm', async () => {
@@ -29,22 +28,25 @@ describe('TabAlarmManager', () => {
       const delay = 5;
 
       await tabAlarmManager.setAlarm(tabId, delay);
-      browserAlarmAPI.clear.calls.reset();
+      browserAlarmAPI.clear.mockReset();
 
       await tabAlarmManager.setAlarm(tabId, delay);
-      expect(browserAlarmAPI.clear).toHaveBeenCalledWith(`tab:${tabId}`);
+      expect(browserAlarmAPI.clear).toHaveBeenCalledTimes(1);
+      expect(browserAlarmAPI.clear).toHaveBeenLastCalledWith(`tab:${tabId}`);
     });
   });
 
   describe('onAlarm', () => {
     it('should add alarm listener', async () => {
       const tabId: TabId = 10;
-      const spy = jasmine.createSpy('alarmCallback');
+      const spy = vi.fn();
 
       await tabAlarmManager.onAlarm(spy);
 
-      (browserAlarmAPI.onAlarm.addListener as jasmine.Spy).calls.mostRecent().args[0]({ name: `tab:${tabId}` });
-      expect(spy).toHaveBeenCalledOnceWith(tabId);
+      browserAlarmAPI.onAlarm.addListener.mock.calls[0][0]({ name: `tab:${tabId}`, scheduledTime: 0 });
+
+      expect(spy).toHaveBeenCalledTimes(1);
+      expect(spy).toHaveBeenLastCalledWith(tabId);
     });
   });
 });
