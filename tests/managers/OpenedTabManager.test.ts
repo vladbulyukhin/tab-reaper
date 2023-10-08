@@ -38,7 +38,7 @@ describe('OpenedTabManager', () => {
       browserStorageAPI,
       tabAlarmManager,
       excludedTabManager,
-      configurationManager,
+      configurationManager
     );
   });
 
@@ -75,7 +75,7 @@ describe('OpenedTabManager', () => {
       expect(tabAlarmManager.setAlarm).toHaveBeenCalledWith(initialTabId, emptyConfiguration.tabRemovalDelayMin);
     });
 
-    it('should not plan removal of the previous tab if it\'s pinned', async () => {
+    it("should not plan removal of the previous tab if it's pinned", async () => {
       const windowId: WindowId = 1;
       const initialTabId: TabId = 2;
 
