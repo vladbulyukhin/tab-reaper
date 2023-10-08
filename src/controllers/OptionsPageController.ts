@@ -57,7 +57,7 @@ export class OptionsPageController implements IPageController {
       keepAudibleTabs: this.$audibleTabCheckbox.checked,
       keepGroupedTabs: this.$groupedTabCheckbox.checked,
       keepPinnedTabs: this.$pinnedTabCheckbox.checked,
-      tabRemovalDelayMin: parseInt(this.$delayInput.value, 10),
+      tabRemovalDelayMin: parseFloat(this.$delayInput.value),
     });
 
     await this.configurationManager.save(configuration);

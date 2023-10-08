@@ -1,9 +1,9 @@
 ﻿import { beforeEach, describe, expect, it } from 'vitest';
 import { DeepMockProxy, mockDeep } from 'vitest-mock-extended';
-import { IConfigurationManager } from '../../src/managers/IConfigurationManager';
-import { IBrowserStorageAPI } from '../../src/api/IBrowserStorageAPI';
-import { ConfigurationManager } from '../../src/managers/ConfigurationManager';
-import { emptyConfiguration, IConfiguration } from '../../src/models/Configuration';
+import { IConfigurationManager } from '../../../src/managers/IConfigurationManager';
+import { IBrowserStorageAPI } from '../../../src/api/IBrowserStorageAPI';
+import { ConfigurationManager } from '../../../src/managers/ConfigurationManager';
+import { emptyConfiguration, IConfiguration } from '../../../src/models/Configuration';
 
 describe('ConfigurationManager', () => {
   let configurationManager: IConfigurationManager;
