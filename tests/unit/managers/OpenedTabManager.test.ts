@@ -1,15 +1,15 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { DeepMockProxy, mockDeep } from 'vitest-mock-extended';
-import { Tab, TabId, WindowId } from '../../src/types';
-import { IBrowserTabAPI } from '../../src/api/IBrowserTabAPI';
-import { IOpenedTabManager } from '../../src/managers/IOpenedTabManager';
-import { IExcludedTabManager } from '../../src/managers/IExcludedTabManager';
-import { OpenedTabManager } from '../../src/managers/OpenedTabManager';
-import { IBrowserRuntimeAPI } from '../../src/api/IBrowserRuntimeAPI';
-import { IConfigurationManager } from '../../src/managers/IConfigurationManager';
-import { ITabAlarmManager } from '../../src/managers/ITabAlarmManager';
-import { emptyConfiguration } from '../../src/models/Configuration';
-import { IBrowserStorageAPI } from '../../src/api/IBrowserStorageAPI';
+import { Tab, TabId, WindowId } from '../../../src/types';
+import { IBrowserTabAPI } from '../../../src/api/IBrowserTabAPI';
+import { IOpenedTabManager } from '../../../src/managers/IOpenedTabManager';
+import { IExcludedTabManager } from '../../../src/managers/IExcludedTabManager';
+import { OpenedTabManager } from '../../../src/managers/OpenedTabManager';
+import { IBrowserRuntimeAPI } from '../../../src/api/IBrowserRuntimeAPI';
+import { IConfigurationManager } from '../../../src/managers/IConfigurationManager';
+import { ITabAlarmManager } from '../../../src/managers/ITabAlarmManager';
+import { emptyConfiguration } from '../../../src/models/Configuration';
+import { IBrowserStorageAPI } from '../../../src/api/IBrowserStorageAPI';
 
 describe('OpenedTabManager', () => {
   let openedTabManager: IOpenedTabManager;

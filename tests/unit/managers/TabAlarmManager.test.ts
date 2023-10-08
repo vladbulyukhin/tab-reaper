@@ -1,9 +1,9 @@
 ﻿import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DeepMockProxy, mockDeep } from 'vitest-mock-extended';
-import { ITabAlarmManager } from '../../src/managers/ITabAlarmManager';
-import { IBrowserAlarmAPI } from '../../src/api/IBrowserAlarmAPI';
-import { TabAlarmManager } from '../../src/managers/TabAlarmManager';
-import { TabId } from '../../src/types';
+import { ITabAlarmManager } from '../../../src/managers/ITabAlarmManager';
+import { IBrowserAlarmAPI } from '../../../src/api/IBrowserAlarmAPI';
+import { TabAlarmManager } from '../../../src/managers/TabAlarmManager';
+import { TabId } from '../../../src/types';
 
 describe('TabAlarmManager', () => {
   let tabAlarmManager: ITabAlarmManager;

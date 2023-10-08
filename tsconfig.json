@@ -12,7 +12,7 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "downlevelIteration": true,
-    "types": ["web-ext-types", "chrome"],
+    "types": ["web-ext-types", "chrome", "node"],
     "lib": ["es2020", "dom"]
   },
   "include": [
