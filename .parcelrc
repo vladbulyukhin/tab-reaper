@@ -1,6 +1,0 @@
-{
-  "extends": "@parcel/config-webextension",
-  "resolvers": [
-    "parcel-resolver-ignore"
-  ]
-}

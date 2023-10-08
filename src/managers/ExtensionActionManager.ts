@@ -1,7 +1,7 @@
-import icon16 from '../icons/icon-active-16.png';
-import icon32 from '../icons/icon-active-32.png';
-import iconGray16 from '../icons/icon-gray-16.png';
-import iconGray32 from '../icons/icon-gray-32.png';
+import icon16 from '/icons/icon-active-16.png?url';
+import icon32 from '/icons/icon-active-32.png?url';
+import iconGray16 from '/icons/icon-gray-16.png?url';
+import iconGray32 from '/icons/icon-gray-32.png?url';
 import { IBrowserExtensionActionAPI } from '../api/IBrowserExtensionActionAPI';
 import { IExtensionActionManager } from './IExtensionActionManager';
 import { TabId } from '../types';
