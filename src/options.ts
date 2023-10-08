@@ -1,3 +1,4 @@
+import './css/options.css';
 import { chromeSyncStorageAPI } from './api/chromeSyncStorageAPI';
 import { OptionsPageController } from './controllers/OptionsPageController';
 import { ConfigurationManager } from './managers/ConfigurationManager';
