@@ -11,7 +11,7 @@
     "build": "vite build",
     "ci": "npm ci",
     "i": "npm install",
-    "lint": "eslint {src,tests}/**/*.{js,ts,tsx}",
+    "lint": "eslint {src,tests}/**/*.{ts,tsx}",
     "lint:fix": "npm run lint -- --fix",
     "start": "vite",
     "test:unit": "vitest --dir ./tests/unit/",
