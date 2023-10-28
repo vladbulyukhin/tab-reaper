@@ -45,7 +45,7 @@ jobs:
       - name: Install dependencies
         run: npm run ci -- --ignore-scripts
       - name: Unit tests
-        run: npm run test:ci
+        run: npm run test:unit:ci
 
   e2e:
     name: End-to-end tests
