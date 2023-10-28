@@ -3,12 +3,29 @@ import { toConfiguration } from '../models/Configuration';
 import { IPageController } from './IPageController';
 
 export class OptionsPageController implements IPageController {
-  private $audibleTabCheckbox: HTMLInputElement;
-  private $delayInput: HTMLInputElement;
-  private $groupedTabCheckbox: HTMLInputElement;
-  private $pinnedTabCheckbox: HTMLInputElement;
-  private $saveButton: HTMLButtonElement;
-  private $savedMessage: HTMLParagraphElement;
+  private get $audibleTabCheckbox(): HTMLInputElement {
+    return OptionsPageController.getPageElementById<HTMLInputElement>('audible-tabs', HTMLInputElement);
+  }
+
+  private get $delayInput(): HTMLInputElement {
+    return OptionsPageController.getPageElementById<HTMLInputElement>('inactivity-minutes', HTMLInputElement);
+  }
+
+  private get $groupedTabCheckbox(): HTMLInputElement {
+    return OptionsPageController.getPageElementById<HTMLInputElement>('grouped-tabs', HTMLInputElement);
+  }
+
+  private get $pinnedTabCheckbox(): HTMLInputElement {
+    return OptionsPageController.getPageElementById<HTMLInputElement>('pinned-tabs', HTMLInputElement);
+  }
+
+  private get $saveButton(): HTMLButtonElement {
+    return OptionsPageController.getPageElementById<HTMLButtonElement>('save', HTMLButtonElement);
+  }
+
+  private get $savedMessage(): HTMLParagraphElement {
+    return OptionsPageController.getPageElementById<HTMLParagraphElement>('saved-message', HTMLParagraphElement);
+  }
 
   constructor(private readonly configurationManager: IConfigurationManager) {
     this.attach = this.attach.bind(this);
@@ -16,31 +33,10 @@ export class OptionsPageController implements IPageController {
   }
 
   public async attach(): Promise<void> {
-    this.prepareControls();
-    await this.reloadConfiguration();
-  }
-
-  private prepareControls(): void {
-    this.$audibleTabCheckbox = OptionsPageController.getPageElementById<HTMLInputElement>('audible-tabs', HTMLInputElement);
-    this.$delayInput = OptionsPageController.getPageElementById<HTMLInputElement>('inactivity-minutes', HTMLInputElement);
-    this.$groupedTabCheckbox = OptionsPageController.getPageElementById<HTMLInputElement>('grouped-tabs', HTMLInputElement);
-    this.$pinnedTabCheckbox = OptionsPageController.getPageElementById<HTMLInputElement>('pinned-tabs', HTMLInputElement);
-    this.$saveButton = OptionsPageController.getPageElementById<HTMLButtonElement>('save', HTMLButtonElement);
-    this.$savedMessage = OptionsPageController.getPageElementById<HTMLParagraphElement>('saved-message', HTMLParagraphElement);
-
-    if (
-      !this.$audibleTabCheckbox ||
-      !this.$delayInput ||
-      !this.$groupedTabCheckbox ||
-      !this.$pinnedTabCheckbox ||
-      !this.$saveButton ||
-      !this.$savedMessage
-    ) {
-      throw new ReferenceError('Inputs are not available on the options page.');
-    }
-
     this.$saveButton.addEventListener('click', this.saveConfiguration);
     this.watchSaveButtonState();
+
+    await this.reloadConfiguration();
   }
 
   private async reloadConfiguration(): Promise<void> {
@@ -95,8 +91,13 @@ export class OptionsPageController implements IPageController {
     });
   }
 
-  private static getPageElementById<T extends HTMLElement>(id: string, constructor: { new (): T }): T | null {
+  private static getPageElementById<T extends HTMLElement>(id: string, constructor: { new (): T }): T {
     const element = document.getElementById(id);
-    return element instanceof constructor ? element : null;
+
+    if (!(element instanceof constructor)) {
+      throw new Error(`Element of type ${constructor.name} with id ${id} was not found.`);
+    }
+
+    return element;
   }
 }

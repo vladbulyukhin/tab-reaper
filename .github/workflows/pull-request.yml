@@ -19,6 +19,8 @@ jobs:
           node-version: ${{ matrix.node-version }}
       - name: Install dependencies
         run: npm run ci -- --ignore-scripts
+      - name: Run type check
+        run: npm run typecheck
       - name: Run ESLint
         run: npm run lint
       - name: Build
