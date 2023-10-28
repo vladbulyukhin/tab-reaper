@@ -7,17 +7,15 @@
   "type": "module",
   "browserslist": "> 0.5%, last 2 versions, not dead",
   "scripts": {
-    "prebuild": "rimraf dist",
     "build": "vite build",
-    "ci": "npm ci",
-    "i": "npm install",
-    "typecheck": "tsc --noEmit",
     "lint": "eslint {src,tests}/**/*.{ts,tsx}",
     "lint:fix": "npm run lint -- --fix",
+    "prebuild": "rimraf dist",
     "start": "vite",
+    "test:e2e": "npx playwright test",
     "test:unit": "vitest --dir ./tests/unit/",
     "test:unit:ci": "npm run test:unit -- --run",
-    "test:e2e": "npx playwright test"
+    "typecheck": "tsc --noEmit"
   },
   "keywords": [],
   "author": "Vladislav Bulyukhin <vladislav.bulyukhin@gmail.com>",
