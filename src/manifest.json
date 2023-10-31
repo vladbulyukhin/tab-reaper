@@ -11,6 +11,7 @@
     "128": "icons/icon-active-128.png"
   },
   "action": {
+    "default_popup": "src/popup.html",
     "default_title": "Tab Reaper"
   },
   "background": {
