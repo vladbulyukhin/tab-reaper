@@ -16,12 +16,14 @@ export const test = base.extend<{
   helperExtensionId: string;
   extensionId: string;
 }>({
-  context: async (_param, use) => {
+  // biome-ignore lint/correctness/noEmptyPattern: This is required for playwright to work
+  context: async ({}, use) => {
     const pathToHelperExtension = path.join(__dirname, "./extension");
     const pathToExtension = path.join(__dirname, "../../../dist");
     const context = await chromium.launchPersistentContext("", {
       headless: false,
       args: [
+        "--headless=new",
         `--disable-extensions-except=${pathToHelperExtension},${pathToExtension}`,
         `--load-extension=${pathToHelperExtension},${pathToExtension}`,
       ],
