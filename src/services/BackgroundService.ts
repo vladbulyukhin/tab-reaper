@@ -1,10 +1,10 @@
-import { IBrowserExtensionActionAPI } from '../api/IBrowserExtensionActionAPI';
-import { IBrowserRuntimeAPI } from '../api/IBrowserRuntimeAPI';
-import { IBrowserTabAPI } from '../api/IBrowserTabAPI';
-import { IOpenedTabManager } from '../managers/IOpenedTabManager';
-import { IExcludedTabManager } from '../managers/IExcludedTabManager';
-import { Tab } from '../types';
-import { IBackgroundService } from './IBackgroundService';
+import type { IBrowserExtensionActionAPI } from "../api/IBrowserExtensionActionAPI";
+import type { IBrowserRuntimeAPI } from "../api/IBrowserRuntimeAPI";
+import type { IBrowserTabAPI } from "../api/IBrowserTabAPI";
+import type { IExcludedTabManager } from "../managers/IExcludedTabManager";
+import type { IOpenedTabManager } from "../managers/IOpenedTabManager";
+import type { Tab } from "../types";
+import type { IBackgroundService } from "./IBackgroundService";
 
 export class BackgroundService implements IBackgroundService {
   constructor(
@@ -12,7 +12,7 @@ export class BackgroundService implements IBackgroundService {
     private readonly _browserTabAPI: IBrowserTabAPI,
     private readonly _browserActionAPI: IBrowserExtensionActionAPI,
     private readonly _openedTabManager: IOpenedTabManager,
-    private readonly _excludedTabManager: IExcludedTabManager
+    private readonly _excludedTabManager: IExcludedTabManager,
   ) {}
 
   public start(): void {
@@ -22,8 +22,12 @@ export class BackgroundService implements IBackgroundService {
   }
 
   private addRuntimeEventListeners(): void {
-    this._browserRuntimeAPI.onInstalled.addListener(this._openedTabManager.watchAllTabs);
-    this._browserRuntimeAPI.onStartup.addListener(this._openedTabManager.watchAllTabs);
+    this._browserRuntimeAPI.onInstalled.addListener(
+      this._openedTabManager.watchAllTabs,
+    );
+    this._browserRuntimeAPI.onStartup.addListener(
+      this._openedTabManager.watchAllTabs,
+    );
   }
 
   private addActionEventListeners(): void {
@@ -34,8 +38,14 @@ export class BackgroundService implements IBackgroundService {
   }
 
   private addTabEventListeners(): void {
-    this._browserTabAPI.onCreated.addListener(this._openedTabManager.onTabCreated);
-    this._browserTabAPI.onActivated.addListener(this._openedTabManager.onTabActivated);
-    this._browserTabAPI.onRemoved.addListener(this._openedTabManager.onTabRemoved);
+    this._browserTabAPI.onCreated.addListener(
+      this._openedTabManager.onTabCreated,
+    );
+    this._browserTabAPI.onActivated.addListener(
+      this._openedTabManager.onTabActivated,
+    );
+    this._browserTabAPI.onRemoved.addListener(
+      this._openedTabManager.onTabRemoved,
+    );
   }
 }

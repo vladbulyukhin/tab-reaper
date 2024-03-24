@@ -1,4 +1,4 @@
-import { IBrowserStorageAPI } from './IBrowserStorageAPI';
+import type { IBrowserStorageAPI } from "./IBrowserStorageAPI";
 
 export const chromeSyncStorageAPI: IBrowserStorageAPI = {
   onChanged: chrome.storage.sync.onChanged,

@@ -1,11 +1,11 @@
-﻿import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { DeepMockProxy, mockDeep } from 'vitest-mock-extended';
-import { ITabAlarmManager } from '../../../src/managers/ITabAlarmManager';
-import { IBrowserAlarmAPI } from '../../../src/api/IBrowserAlarmAPI';
-import { TabAlarmManager } from '../../../src/managers/TabAlarmManager';
-import { TabId } from '../../../src/types';
+﻿import { beforeEach, describe, expect, it, vi } from "vitest";
+import { type DeepMockProxy, mockDeep } from "vitest-mock-extended";
+import type { IBrowserAlarmAPI } from "../../../src/api/IBrowserAlarmAPI";
+import type { ITabAlarmManager } from "../../../src/managers/ITabAlarmManager";
+import { TabAlarmManager } from "../../../src/managers/TabAlarmManager";
+import type { TabId } from "../../../src/types";
 
-describe('TabAlarmManager', () => {
+describe("TabAlarmManager", () => {
   let tabAlarmManager: ITabAlarmManager;
   let browserAlarmAPI: DeepMockProxy<IBrowserAlarmAPI>;
 
@@ -14,16 +14,18 @@ describe('TabAlarmManager', () => {
     tabAlarmManager = new TabAlarmManager(browserAlarmAPI);
   });
 
-  describe('setAlarm', () => {
-    it('should set alarm', async () => {
+  describe("setAlarm", () => {
+    it("should set alarm", async () => {
       const tabId: TabId = 10;
       const delay = 5;
 
       await tabAlarmManager.setAlarm(tabId, delay);
-      expect(browserAlarmAPI.create).toHaveBeenCalledWith(`tab:${tabId}`, { delayInMinutes: delay });
+      expect(browserAlarmAPI.create).toHaveBeenCalledWith(`tab:${tabId}`, {
+        delayInMinutes: delay,
+      });
     });
 
-    it('should clear previously set alarm', async () => {
+    it("should clear previously set alarm", async () => {
       const tabId: TabId = 10;
       const delay = 5;
 
@@ -36,14 +38,17 @@ describe('TabAlarmManager', () => {
     });
   });
 
-  describe('onAlarm', () => {
-    it('should add alarm listener', async () => {
+  describe("onAlarm", () => {
+    it("should add alarm listener", async () => {
       const tabId: TabId = 10;
       const spy = vi.fn();
 
       await tabAlarmManager.onAlarm(spy);
 
-      browserAlarmAPI.onAlarm.addListener.mock.calls[0][0]({ name: `tab:${tabId}`, scheduledTime: 0 });
+      browserAlarmAPI.onAlarm.addListener.mock.calls[0][0]({
+        name: `tab:${tabId}`,
+        scheduledTime: 0,
+      });
 
       expect(spy).toHaveBeenCalledTimes(1);
       expect(spy).toHaveBeenLastCalledWith(tabId);

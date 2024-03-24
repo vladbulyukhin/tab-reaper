@@ -1,30 +1,48 @@
-import { IConfigurationManager } from '../managers/IConfigurationManager';
-import { toConfiguration } from '../models/Configuration';
-import { IPageController } from './IPageController';
+import type { IConfigurationManager } from "../managers/IConfigurationManager";
+import { toConfiguration } from "../models/Configuration";
+import type { IPageController } from "./IPageController";
 
 export class OptionsPageController implements IPageController {
   private get $audibleTabCheckbox(): HTMLInputElement {
-    return OptionsPageController.getPageElementById<HTMLInputElement>('audible-tabs', HTMLInputElement);
+    return OptionsPageController.getPageElementById<HTMLInputElement>(
+      "audible-tabs",
+      HTMLInputElement,
+    );
   }
 
   private get $delayInput(): HTMLInputElement {
-    return OptionsPageController.getPageElementById<HTMLInputElement>('inactivity-minutes', HTMLInputElement);
+    return OptionsPageController.getPageElementById<HTMLInputElement>(
+      "inactivity-minutes",
+      HTMLInputElement,
+    );
   }
 
   private get $groupedTabCheckbox(): HTMLInputElement {
-    return OptionsPageController.getPageElementById<HTMLInputElement>('grouped-tabs', HTMLInputElement);
+    return OptionsPageController.getPageElementById<HTMLInputElement>(
+      "grouped-tabs",
+      HTMLInputElement,
+    );
   }
 
   private get $pinnedTabCheckbox(): HTMLInputElement {
-    return OptionsPageController.getPageElementById<HTMLInputElement>('pinned-tabs', HTMLInputElement);
+    return OptionsPageController.getPageElementById<HTMLInputElement>(
+      "pinned-tabs",
+      HTMLInputElement,
+    );
   }
 
   private get $saveButton(): HTMLButtonElement {
-    return OptionsPageController.getPageElementById<HTMLButtonElement>('save', HTMLButtonElement);
+    return OptionsPageController.getPageElementById<HTMLButtonElement>(
+      "save",
+      HTMLButtonElement,
+    );
   }
 
   private get $savedMessage(): HTMLParagraphElement {
-    return OptionsPageController.getPageElementById<HTMLParagraphElement>('saved-message', HTMLParagraphElement);
+    return OptionsPageController.getPageElementById<HTMLParagraphElement>(
+      "saved-message",
+      HTMLParagraphElement,
+    );
   }
 
   constructor(private readonly configurationManager: IConfigurationManager) {
@@ -33,7 +51,7 @@ export class OptionsPageController implements IPageController {
   }
 
   public async attach(): Promise<void> {
-    this.$saveButton.addEventListener('click', this.saveConfiguration);
+    this.$saveButton.addEventListener("click", this.saveConfiguration);
     this.watchSaveButtonState();
 
     await this.reloadConfiguration();
@@ -53,19 +71,19 @@ export class OptionsPageController implements IPageController {
       keepAudibleTabs: this.$audibleTabCheckbox.checked,
       keepGroupedTabs: this.$groupedTabCheckbox.checked,
       keepPinnedTabs: this.$pinnedTabCheckbox.checked,
-      tabRemovalDelayMin: parseFloat(this.$delayInput.value),
+      tabRemovalDelayMin: Number.parseFloat(this.$delayInput.value),
     });
 
     await this.configurationManager.save(configuration);
 
-    this.$savedMessage.classList.remove('hidden');
-    this.$savedMessage.classList.add('inline');
+    this.$savedMessage.classList.remove("hidden");
+    this.$savedMessage.classList.add("inline");
 
     this.$saveButton.disabled = true;
 
     setTimeout(() => {
-      this.$savedMessage.classList.add('hidden');
-      this.$savedMessage.classList.remove('inline');
+      this.$savedMessage.classList.add("hidden");
+      this.$savedMessage.classList.remove("inline");
     }, 5000);
   }
 
@@ -77,8 +95,8 @@ export class OptionsPageController implements IPageController {
       this.$pinnedTabCheckbox,
     ];
 
-    dependencies.forEach((dep) => {
-      dep.addEventListener('change', async () => {
+    for (const dep of dependencies) {
+      dep.addEventListener("change", async () => {
         const configuration = await this.configurationManager.get();
 
         this.$saveButton.disabled = !(
@@ -88,14 +106,19 @@ export class OptionsPageController implements IPageController {
           String(configuration.tabRemovalDelayMin) !== this.$delayInput.value
         );
       });
-    });
+    }
   }
 
-  private static getPageElementById<T extends HTMLElement>(id: string, constructor: { new (): T }): T {
+  private static getPageElementById<T extends HTMLElement>(
+    id: string,
+    construct: { new (): T },
+  ): T {
     const element = document.getElementById(id);
 
-    if (!(element instanceof constructor)) {
-      throw new Error(`Element of type ${constructor.name} with id ${id} was not found.`);
+    if (!(element instanceof construct)) {
+      throw new Error(
+        `Element of type ${construct.name} with id ${id} was not found.`,
+      );
     }
 
     return element;

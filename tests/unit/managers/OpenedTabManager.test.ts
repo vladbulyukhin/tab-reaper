@@ -1,17 +1,17 @@
-import { beforeEach, describe, expect, it } from 'vitest';
-import { DeepMockProxy, mockDeep } from 'vitest-mock-extended';
-import { Tab, TabId, WindowId } from '../../../src/types';
-import { IBrowserTabAPI } from '../../../src/api/IBrowserTabAPI';
-import { IOpenedTabManager } from '../../../src/managers/IOpenedTabManager';
-import { IExcludedTabManager } from '../../../src/managers/IExcludedTabManager';
-import { OpenedTabManager } from '../../../src/managers/OpenedTabManager';
-import { IBrowserRuntimeAPI } from '../../../src/api/IBrowserRuntimeAPI';
-import { IConfigurationManager } from '../../../src/managers/IConfigurationManager';
-import { ITabAlarmManager } from '../../../src/managers/ITabAlarmManager';
-import { emptyConfiguration } from '../../../src/models/Configuration';
-import { IBrowserStorageAPI } from '../../../src/api/IBrowserStorageAPI';
+import { beforeEach, describe, expect, it } from "vitest";
+import { type DeepMockProxy, mockDeep } from "vitest-mock-extended";
+import type { IBrowserRuntimeAPI } from "../../../src/api/IBrowserRuntimeAPI";
+import type { IBrowserStorageAPI } from "../../../src/api/IBrowserStorageAPI";
+import type { IBrowserTabAPI } from "../../../src/api/IBrowserTabAPI";
+import type { IConfigurationManager } from "../../../src/managers/IConfigurationManager";
+import type { IExcludedTabManager } from "../../../src/managers/IExcludedTabManager";
+import type { IOpenedTabManager } from "../../../src/managers/IOpenedTabManager";
+import type { ITabAlarmManager } from "../../../src/managers/ITabAlarmManager";
+import { OpenedTabManager } from "../../../src/managers/OpenedTabManager";
+import { emptyConfiguration } from "../../../src/models/Configuration";
+import type { Tab, TabId, WindowId } from "../../../src/types";
 
-describe('OpenedTabManager', () => {
+describe("OpenedTabManager", () => {
   let openedTabManager: IOpenedTabManager;
   let browserRuntimeAPI: DeepMockProxy<IBrowserRuntimeAPI>;
   let browserTabAPI: DeepMockProxy<IBrowserTabAPI>;
@@ -22,7 +22,9 @@ describe('OpenedTabManager', () => {
 
   beforeEach(() => {
     browserStorageAPI = mockDeep<IBrowserStorageAPI>();
-    browserStorageAPI.get.mockReturnValue(Promise.resolve({ previousActiveTabByWindow: {} }));
+    browserStorageAPI.get.mockReturnValue(
+      Promise.resolve({ previousActiveTabByWindow: {} }),
+    );
 
     browserRuntimeAPI = mockDeep<IBrowserRuntimeAPI>();
     browserTabAPI = mockDeep<IBrowserTabAPI>();
@@ -30,7 +32,9 @@ describe('OpenedTabManager', () => {
     excludedTabManager = mockDeep<IExcludedTabManager>();
 
     configurationManager = mockDeep<IConfigurationManager>();
-    configurationManager.get.mockReturnValue(Promise.resolve(emptyConfiguration));
+    configurationManager.get.mockReturnValue(
+      Promise.resolve(emptyConfiguration),
+    );
 
     openedTabManager = new OpenedTabManager(
       browserRuntimeAPI,
@@ -38,12 +42,12 @@ describe('OpenedTabManager', () => {
       browserStorageAPI,
       tabAlarmManager,
       excludedTabManager,
-      configurationManager
+      configurationManager,
     );
   });
 
-  describe('onTabRemoved', () => {
-    it('should clear existing timeouts', async () => {
+  describe("onTabRemoved", () => {
+    it("should clear existing timeouts", async () => {
       const tabId: TabId = 1;
 
       await openedTabManager.onTabRemoved(tabId);
@@ -52,8 +56,8 @@ describe('OpenedTabManager', () => {
     });
   });
 
-  describe('onTabActivated', () => {
-    it('should clear timeout for activated tab', async () => {
+  describe("onTabActivated", () => {
+    it("should clear timeout for activated tab", async () => {
       const windowId: WindowId = 1;
       const tabId: TabId = 2;
 
@@ -62,7 +66,7 @@ describe('OpenedTabManager', () => {
       expect(tabAlarmManager.clearAlarm).toHaveBeenCalledWith(tabId);
     });
 
-    it('should plan removal of the previous tab', async () => {
+    it("should plan removal of the previous tab", async () => {
       const windowId: WindowId = 1;
       const initialTabId: TabId = 2;
 
@@ -72,7 +76,10 @@ describe('OpenedTabManager', () => {
 
       await openedTabManager.onTabActivated({ windowId, tabId });
 
-      expect(tabAlarmManager.setAlarm).toHaveBeenCalledWith(initialTabId, emptyConfiguration.tabRemovalDelayMin);
+      expect(tabAlarmManager.setAlarm).toHaveBeenCalledWith(
+        initialTabId,
+        emptyConfiguration.tabRemovalDelayMin,
+      );
     });
 
     it("should not plan removal of the previous tab if it's pinned", async () => {
@@ -90,16 +97,19 @@ describe('OpenedTabManager', () => {
     });
   });
 
-  describe('onTabCreated', () => {
-    it('should plan removal of created tab', async () => {
+  describe("onTabCreated", () => {
+    it("should plan removal of created tab", async () => {
       const tab = createTestTab();
 
       await openedTabManager.onTabCreated(tab);
 
-      expect(tabAlarmManager.setAlarm).toHaveBeenCalledWith(tab.id, expect.any(Number));
+      expect(tabAlarmManager.setAlarm).toHaveBeenCalledWith(
+        tab.id,
+        expect.any(Number),
+      );
     });
 
-    it('should not plan removal of excluded tab', async () => {
+    it("should not plan removal of excluded tab", async () => {
       const tab = createTestTab();
       excludedTabManager.isExcluded.mockReturnValue(Promise.resolve(true));
 

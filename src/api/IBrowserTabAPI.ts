@@ -1,4 +1,11 @@
-import { Tab, TabActivatedEvent, TabCreatedEvent, TabId, TabQueryInfo, TabRemovedEvent } from '../types';
+import type {
+  Tab,
+  TabActivatedEvent,
+  TabCreatedEvent,
+  TabId,
+  TabQueryInfo,
+  TabRemovedEvent,
+} from "../types";
 
 export interface IBrowserTabAPI {
   get(tabId: TabId): Promise<Tab>;

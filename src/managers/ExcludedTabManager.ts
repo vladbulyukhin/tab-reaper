@@ -1,15 +1,22 @@
-import { TabId } from '../types';
-import { IExtensionActionManager } from './IExtensionActionManager';
-import { IExcludedTabManager } from './IExcludedTabManager';
-import { IBrowserStorageAPI } from '../api/IBrowserStorageAPI';
-import { CachedValue } from '../helpers/CachedValue';
+import type { IBrowserStorageAPI } from "../api/IBrowserStorageAPI";
+import { CachedValue } from "../helpers/CachedValue";
+import type { TabId } from "../types";
+import type { IExcludedTabManager } from "./IExcludedTabManager";
+import type { IExtensionActionManager } from "./IExtensionActionManager";
 
 export class ExcludedTabManager implements IExcludedTabManager {
-  private static readonly StorageKey = 'excludedTabs';
+  private static readonly StorageKey = "excludedTabs";
   private readonly _excludedTabs: CachedValue<ReadonlyArray<TabId>>;
 
-  constructor(private readonly _browserStorageAPI: IBrowserStorageAPI, private readonly _extensionIconService: IExtensionActionManager) {
-    this._excludedTabs = new CachedValue<ReadonlyArray<TabId>>(this._browserStorageAPI, ExcludedTabManager.StorageKey, []);
+  constructor(
+    private readonly _browserStorageAPI: IBrowserStorageAPI,
+    private readonly _extensionIconService: IExtensionActionManager,
+  ) {
+    this._excludedTabs = new CachedValue<ReadonlyArray<TabId>>(
+      this._browserStorageAPI,
+      ExcludedTabManager.StorageKey,
+      [],
+    );
   }
 
   public async isExcluded(tabId: number): Promise<boolean> {

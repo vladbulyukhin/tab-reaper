@@ -1,14 +1,22 @@
-import { IBrowserStorageAPI } from '../api/IBrowserStorageAPI';
-import { emptyConfiguration, IConfiguration, toConfiguration } from '../models/Configuration';
-import { IConfigurationManager } from './IConfigurationManager';
-import { CachedValue } from '../helpers/CachedValue';
+import type { IBrowserStorageAPI } from "../api/IBrowserStorageAPI";
+import { CachedValue } from "../helpers/CachedValue";
+import {
+  type IConfiguration,
+  emptyConfiguration,
+  toConfiguration,
+} from "../models/Configuration";
+import type { IConfigurationManager } from "./IConfigurationManager";
 
 export class ConfigurationManager implements IConfigurationManager {
-  private static readonly StorageKey: string = 'configuration';
+  private static readonly StorageKey: string = "configuration";
   private readonly _configuration: CachedValue<IConfiguration>;
 
   constructor(private readonly _browserStorageAPI: IBrowserStorageAPI) {
-    this._configuration = new CachedValue<IConfiguration>(this._browserStorageAPI, ConfigurationManager.StorageKey, emptyConfiguration);
+    this._configuration = new CachedValue<IConfiguration>(
+      this._browserStorageAPI,
+      ConfigurationManager.StorageKey,
+      emptyConfiguration,
+    );
   }
 
   public async get(): Promise<IConfiguration> {

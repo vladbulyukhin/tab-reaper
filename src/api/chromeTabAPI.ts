@@ -1,4 +1,4 @@
-import { IBrowserTabAPI } from './IBrowserTabAPI';
+import type { IBrowserTabAPI } from "./IBrowserTabAPI";
 
 export const chromeTabAPI: IBrowserTabAPI = {
   get: chrome.tabs.get,

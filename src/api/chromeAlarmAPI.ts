@@ -1,4 +1,4 @@
-import { IBrowserAlarmAPI } from './IBrowserAlarmAPI';
+import type { IBrowserAlarmAPI } from "./IBrowserAlarmAPI";
 
 export const chromeAlarmAPI: IBrowserAlarmAPI = {
   create: chrome.alarms.create,

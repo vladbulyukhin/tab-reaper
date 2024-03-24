@@ -1,11 +1,14 @@
-﻿import { beforeEach, describe, expect, it } from 'vitest';
-import { DeepMockProxy, mockDeep } from 'vitest-mock-extended';
-import { IConfigurationManager } from '../../../src/managers/IConfigurationManager';
-import { IBrowserStorageAPI } from '../../../src/api/IBrowserStorageAPI';
-import { ConfigurationManager } from '../../../src/managers/ConfigurationManager';
-import { emptyConfiguration, IConfiguration } from '../../../src/models/Configuration';
+﻿import { beforeEach, describe, expect, it } from "vitest";
+import { type DeepMockProxy, mockDeep } from "vitest-mock-extended";
+import type { IBrowserStorageAPI } from "../../../src/api/IBrowserStorageAPI";
+import { ConfigurationManager } from "../../../src/managers/ConfigurationManager";
+import type { IConfigurationManager } from "../../../src/managers/IConfigurationManager";
+import {
+  type IConfiguration,
+  emptyConfiguration,
+} from "../../../src/models/Configuration";
 
-describe('ConfigurationManager', () => {
+describe("ConfigurationManager", () => {
   let configurationManager: IConfigurationManager;
   let browserStorageAPI: DeepMockProxy<IBrowserStorageAPI>;
 
@@ -14,9 +17,11 @@ describe('ConfigurationManager', () => {
     configurationManager = new ConfigurationManager(browserStorageAPI);
   });
 
-  describe('get', () => {
-    it('should load configuration from storage on the first call', async () => {
-      browserStorageAPI.get.mockReturnValue(Promise.resolve({ configuration: emptyConfiguration }));
+  describe("get", () => {
+    it("should load configuration from storage on the first call", async () => {
+      browserStorageAPI.get.mockReturnValue(
+        Promise.resolve({ configuration: emptyConfiguration }),
+      );
 
       const result = await configurationManager.get();
 
@@ -25,7 +30,9 @@ describe('ConfigurationManager', () => {
     });
 
     it("shouldn't load configuration from storage on the second and further calls", async () => {
-      browserStorageAPI.get.mockReturnValue(Promise.resolve({ configuration: emptyConfiguration }));
+      browserStorageAPI.get.mockReturnValue(
+        Promise.resolve({ configuration: emptyConfiguration }),
+      );
 
       await configurationManager.get();
       const result = await configurationManager.get();
@@ -35,45 +42,70 @@ describe('ConfigurationManager', () => {
     });
   });
 
-  describe('save', () => {
-    it('should merge passed configuration with existing', async () => {
+  describe("save", () => {
+    it("should merge passed configuration with existing", async () => {
       // load cache
-      browserStorageAPI.get.mockReturnValue(Promise.resolve({ configuration: emptyConfiguration }));
+      browserStorageAPI.get.mockReturnValue(
+        Promise.resolve({ configuration: emptyConfiguration }),
+      );
       await configurationManager.get();
 
-      const partialConfiguration: Partial<IConfiguration> = { keepGroupedTabs: false };
+      const partialConfiguration: Partial<IConfiguration> = {
+        keepGroupedTabs: false,
+      };
       await configurationManager.save(partialConfiguration);
 
       const result = await configurationManager.get();
 
-      expect(result).toEqual({ ...emptyConfiguration, ...partialConfiguration });
+      expect(result).toEqual({
+        ...emptyConfiguration,
+        ...partialConfiguration,
+      });
       expect(browserStorageAPI.get).toHaveBeenCalledTimes(1);
     });
   });
 
-  describe('handleConfigurationChanged', async () => {
-    it('should update cached configuration when it changes in the storage', async () => {
-      browserStorageAPI.get.mockReturnValue(Promise.resolve({ configuration: emptyConfiguration }));
+  describe("handleConfigurationChanged", async () => {
+    it("should update cached configuration when it changes in the storage", async () => {
+      browserStorageAPI.get.mockReturnValue(
+        Promise.resolve({ configuration: emptyConfiguration }),
+      );
       const initial = await configurationManager.get();
-      expect(initial.tabRemovalDelayMin).toBe(emptyConfiguration.tabRemovalDelayMin);
+      expect(initial.tabRemovalDelayMin).toBe(
+        emptyConfiguration.tabRemovalDelayMin,
+      );
 
       // Trigger the event manually by calling the event listener with the mock changes
       const tabRemovalDelayMin = 60;
-      const newConfiguration = { configuration: { newValue: { ...emptyConfiguration, tabRemovalDelayMin } } };
-      browserStorageAPI.onChanged.addListener.mock.calls[0][0](newConfiguration, 'session');
+      const newConfiguration = {
+        configuration: {
+          newValue: { ...emptyConfiguration, tabRemovalDelayMin },
+        },
+      };
+      browserStorageAPI.onChanged.addListener.mock.calls[0][0](
+        newConfiguration,
+        "session",
+      );
 
       const result = await configurationManager.get();
       expect(result.tabRemovalDelayMin).toBe(tabRemovalDelayMin);
     });
 
-    it('should not update configuration with unrelated changes in storage', async () => {
-      browserStorageAPI.get.mockReturnValue(Promise.resolve({ configuration: emptyConfiguration }));
+    it("should not update configuration with unrelated changes in storage", async () => {
+      browserStorageAPI.get.mockReturnValue(
+        Promise.resolve({ configuration: emptyConfiguration }),
+      );
       const initial = await configurationManager.get();
-      expect(initial.tabRemovalDelayMin).toBe(emptyConfiguration.tabRemovalDelayMin);
+      expect(initial.tabRemovalDelayMin).toBe(
+        emptyConfiguration.tabRemovalDelayMin,
+      );
 
       // Trigger the event manually by calling the event listener with the mock changes
       const newConfiguration = { unrelated: { newValue: { unrelated: true } } };
-      browserStorageAPI.onChanged.addListener.mock.calls[0][0](newConfiguration, 'session');
+      browserStorageAPI.onChanged.addListener.mock.calls[0][0](
+        newConfiguration,
+        "session",
+      );
 
       const result = await configurationManager.get();
       expect(result).toEqual(emptyConfiguration);
