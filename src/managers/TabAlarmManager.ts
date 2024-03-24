@@ -1,6 +1,6 @@
-import { IBrowserAlarmAPI } from '../api/IBrowserAlarmAPI';
-import { TabId } from '../types';
-import { ITabAlarmManager } from './ITabAlarmManager';
+import type { IBrowserAlarmAPI } from "../api/IBrowserAlarmAPI";
+import type { TabId } from "../types";
+import type { ITabAlarmManager } from "./ITabAlarmManager";
 
 export type TabAlarmName = `tab:${TabId}`;
 
@@ -10,7 +10,9 @@ export class TabAlarmManager implements ITabAlarmManager {
   public async setAlarm(tabId: TabId, delayInMinutes: number): Promise<void> {
     const alarmName = TabAlarmManager.getAlarmName(tabId);
     await this._browserAlarmAPI.clear(alarmName);
-    await this._browserAlarmAPI.create(alarmName, { delayInMinutes: delayInMinutes });
+    await this._browserAlarmAPI.create(alarmName, {
+      delayInMinutes: delayInMinutes,
+    });
   }
 
   public async clearAlarm(tabId: TabId): Promise<void> {
@@ -32,10 +34,10 @@ export class TabAlarmManager implements ITabAlarmManager {
   }
 
   private static getTabId(alarmName: TabAlarmName): TabId {
-    return parseInt(alarmName.split(':')[1], 10);
+    return Number.parseInt(alarmName.split(":")[1], 10);
   }
 
   private static isTabAlarmName(alarmName: string): alarmName is TabAlarmName {
-    return alarmName.startsWith('tab:');
+    return alarmName.startsWith("tab:");
   }
 }

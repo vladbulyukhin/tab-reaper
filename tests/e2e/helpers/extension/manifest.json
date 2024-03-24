@@ -9,8 +9,5 @@
   "background": {
     "service_worker": "helper.js"
   },
-  "permissions": [
-    "tabs",
-    "tabGroups"
-  ]
+  "permissions": ["tabs", "tabGroups"]
 }

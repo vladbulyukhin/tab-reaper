@@ -1,4 +1,4 @@
-import { BrowserStorageChangedEvent } from '../types';
+import type { BrowserStorageChangedEvent } from "../types";
 
 export interface IBrowserStorageAPI {
   onChanged: BrowserStorageChangedEvent;

@@ -1,14 +1,19 @@
-import { Page } from '@playwright/test';
+import type { Page } from "@playwright/test";
 
 export class OptionsPage {
-  constructor(private readonly page: Page, private readonly extensionId: string) {}
+  constructor(
+    private readonly page: Page,
+    private readonly extensionId: string,
+  ) {}
 
   async goto() {
-    await this.page.goto(`chrome-extension://${this.extensionId}/src/options.html`);
+    await this.page.goto(
+      `chrome-extension://${this.extensionId}/src/options.html`,
+    );
   }
 
   async setPinnedTabs(enabled: boolean) {
-    const input = this.page.locator('#pinned-tabs');
+    const input = this.page.locator("#pinned-tabs");
 
     if (enabled) {
       await input.check();
@@ -18,7 +23,7 @@ export class OptionsPage {
   }
 
   async setGroupedTabs(enabled: boolean) {
-    const input = this.page.locator('#grouped-tabs');
+    const input = this.page.locator("#grouped-tabs");
 
     if (enabled) {
       await input.check();
@@ -28,7 +33,7 @@ export class OptionsPage {
   }
 
   async setAudibleTabs(enabled: boolean) {
-    const input = this.page.locator('#audible-tabs');
+    const input = this.page.locator("#audible-tabs");
 
     if (enabled) {
       await input.check();
@@ -38,13 +43,13 @@ export class OptionsPage {
   }
 
   async setIdlePeriod(minutes: number) {
-    const input = this.page.locator('#inactivity-minutes');
+    const input = this.page.locator("#inactivity-minutes");
     await input.fill(minutes.toString());
     await input.blur();
   }
 
   async saveAndWaitForSuccess() {
-    await this.page.locator('#save').click();
-    await this.page.waitForSelector('#saved-message', { state: 'visible' });
+    await this.page.locator("#save").click();
+    await this.page.waitForSelector("#saved-message", { state: "visible" });
   }
 }

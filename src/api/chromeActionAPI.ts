@@ -1,4 +1,4 @@
-import { IBrowserExtensionActionAPI } from './IBrowserExtensionActionAPI';
+import type { IBrowserExtensionActionAPI } from "./IBrowserExtensionActionAPI";
 
 export const chromeActionAPI: IBrowserExtensionActionAPI = {
   setIcon: chrome.action?.setIcon,

@@ -1,4 +1,8 @@
-import { BrowserLastError, ExtensionInstalledEvent, ExtensionStartupEvent } from '../types';
+import type {
+  BrowserLastError,
+  ExtensionInstalledEvent,
+  ExtensionStartupEvent,
+} from "../types";
 
 export interface IBrowserRuntimeAPI {
   getLastError: () => BrowserLastError | undefined;

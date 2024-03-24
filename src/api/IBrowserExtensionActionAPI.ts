@@ -1,4 +1,4 @@
-import { BrowserClickedEvent } from '../types';
+import type { BrowserClickedEvent } from "../types";
 
 export interface IBrowserExtensionActionAPI {
   setIcon(details: chrome.action.TabIconDetails): Promise<void>;

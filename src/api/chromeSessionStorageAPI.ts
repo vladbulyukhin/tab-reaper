@@ -1,4 +1,4 @@
-﻿import { IBrowserStorageAPI } from './IBrowserStorageAPI';
+﻿import type { IBrowserStorageAPI } from "./IBrowserStorageAPI";
 
 export const chromeSessionStorageAPI: IBrowserStorageAPI = {
   onChanged: chrome.storage.session.onChanged,

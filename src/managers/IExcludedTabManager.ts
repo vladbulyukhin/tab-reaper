@@ -1,4 +1,4 @@
-import { TabId } from '../types';
+import type { TabId } from "../types";
 
 export interface IExcludedTabManager {
   isExcluded(tabId: TabId): Promise<boolean>;

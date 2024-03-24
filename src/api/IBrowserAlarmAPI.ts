@@ -1,4 +1,4 @@
-import { AlarmCreateInfo, AlarmEvent } from '../types';
+import type { AlarmCreateInfo, AlarmEvent } from "../types";
 
 export interface IBrowserAlarmAPI {
   create(name: string, alarmInfo: AlarmCreateInfo): Promise<void>;

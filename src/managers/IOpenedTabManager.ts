@@ -1,4 +1,4 @@
-import { Tab, TabActiveInfo, TabId } from '../types';
+import type { Tab, TabActiveInfo, TabId } from "../types";
 
 export interface IOpenedTabManager {
   watchAllTabs(): Promise<void>;
