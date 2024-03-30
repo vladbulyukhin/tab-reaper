@@ -1,7 +1,12 @@
 {
   "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/popup/*"]
+    },
     "target": "es2020",
     "module": "esnext",
+    "jsx": "react-jsx",
     "moduleResolution": "node",
     "strict": true,
     "esModuleInterop": true,
@@ -15,11 +20,6 @@
     "types": ["web-ext-types", "chrome", "node"],
     "lib": ["es2020", "dom"]
   },
-  "include": [
-    "src/**/*.ts",
-    "global.d.ts"
-  ],
-  "exclude": [
-    "node_modules"
-  ]
+  "include": ["src/**/*.ts", "global.d.ts"],
+  "exclude": ["node_modules"]
 }
