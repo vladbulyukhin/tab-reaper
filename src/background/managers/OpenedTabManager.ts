@@ -107,7 +107,13 @@ export class OpenedTabManager implements IOpenedTabManager {
       return;
     }
 
-    const tab = await this.browserApiProvider.tab.get(tabId);
+    let tab: chrome.tabs.Tab;
+    try {
+      tab = await this.browserApiProvider.tab.get(tabId);
+    } catch (e) {
+      logInfo("Tab not found", tabId, e);
+      return;
+    }
 
     if (await this.canRemoveTab(tab)) {
       await this.browserApiProvider.tab.remove(tabId);
