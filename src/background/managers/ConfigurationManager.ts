@@ -32,6 +32,6 @@ export class ConfigurationManager implements IConfigurationManager {
   }
 
   public async save(configuration: Partial<IConfiguration>): Promise<void> {
-    return await this.configuration.put(toConfiguration(configuration));
+    await this.configuration.update(() => toConfiguration(configuration));
   }
 }

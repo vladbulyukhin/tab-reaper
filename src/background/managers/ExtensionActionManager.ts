@@ -5,6 +5,7 @@ import iconGray32 from "/icons/icon-gray-32.png?url";
 import type { IBrowserApiProvider } from "../../api/IBrowserApiProvider";
 import type { TabId } from "../../types";
 import { PersistedValue } from "../utils/PersistedValue";
+import { SequentialTaskQueue } from "../utils/SequentialTaskQueue";
 import { abbreviateNumber } from "../utils/abbreviateNumber";
 
 const disabledIconPaths = {
@@ -20,11 +21,12 @@ const enabledIconPaths = {
 export interface IExtensionActionManager {
   disableExtensionIcon(tabId?: TabId): Promise<void>;
   enableExtensionIcon(tabId?: TabId): Promise<void>;
-  incrementBadgeCounter(): void;
+  incrementBadgeCounter(): Promise<void>;
 }
 
 export class ExtensionActionManager implements IExtensionActionManager {
   private badgeCount: PersistedValue<number>;
+  private badgeUpdateQueue: SequentialTaskQueue;
 
   constructor(
     private readonly browserApiProvider: Pick<
@@ -37,6 +39,8 @@ export class ExtensionActionManager implements IExtensionActionManager {
       "badgeCount",
       0,
     );
+
+    this.badgeUpdateQueue = new SequentialTaskQueue();
   }
 
   public async disableExtensionIcon(tabId?: TabId): Promise<void> {
@@ -63,10 +67,12 @@ export class ExtensionActionManager implements IExtensionActionManager {
   }
 
   public async incrementBadgeCounter(): Promise<void> {
-    const count = (await this.badgeCount.get()) + 1;
+    const count = await this.badgeCount.update((c) => c + 1);
+    await this.badgeUpdateQueue.addTask(() => this.updateBadgeCounter(count));
+  }
 
+  private async updateBadgeCounter(newCount: number): Promise<void> {
     await Promise.all([
-      this.badgeCount.put(count),
       this.browserApiProvider.action.setBadgeBackgroundColor({
         color: [106, 106, 106, 255],
       }),
@@ -74,7 +80,7 @@ export class ExtensionActionManager implements IExtensionActionManager {
         color: [255, 255, 255, 255],
       }),
       this.browserApiProvider.action.setBadgeText({
-        text: abbreviateNumber(count),
+        text: abbreviateNumber(newCount),
       }),
     ]);
   }

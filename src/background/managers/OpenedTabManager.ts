@@ -86,15 +86,16 @@ export class OpenedTabManager implements IOpenedTabManager {
     activeInfo: chrome.tabs.TabActiveInfo,
   ): Promise<void> {
     const { windowId, tabId } = activeInfo;
+
     await this.tabAlarmManager.clearAlarm(tabId);
 
     const previousActiveIds = await this.previousActiveTabByWindow.get();
     await this.scheduleTabRemoval(previousActiveIds[windowId]);
 
-    await this.previousActiveTabByWindow.put({
+    await this.previousActiveTabByWindow.update((previousActiveIds) => ({
       ...previousActiveIds,
       [windowId]: tabId,
-    });
+    }));
   }
 
   private async onTabRemoved(tabId: TabId): Promise<void> {
@@ -109,17 +110,18 @@ export class OpenedTabManager implements IOpenedTabManager {
     const tab = await this.browserApiProvider.tab.get(tabId);
 
     if (await this.canRemoveTab(tab)) {
-      const recentlyRemoved = await this.recentlyRemovedTabs.get();
       await this.browserApiProvider.tab.remove(tabId);
-      recentlyRemoved.enqueue({
-        id: tab.id,
-        url: tab.url,
-        title: tab.title,
-        favIconUrl: tab.favIconUrl,
-        removedAt: new Date().toISOString(),
-      });
-      await this.recentlyRemovedTabs.put(recentlyRemoved);
       await this.extensionActionManager.incrementBadgeCounter();
+      await this.recentlyRemovedTabs.update((queue) => {
+        queue.enqueue({
+          id: tab.id,
+          url: tab.url,
+          title: tab.title,
+          favIconUrl: tab.favIconUrl,
+          removedAt: new Date().toISOString(),
+        });
+        return queue;
+      });
     } else if (!tab.active) {
       await this.scheduleTabRemoval(tabId);
     }
