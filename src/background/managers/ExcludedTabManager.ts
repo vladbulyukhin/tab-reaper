@@ -32,16 +32,16 @@ export class ExcludedTabManager implements IExcludedTabManager {
   }
 
   public async exclude(tabId: TabId): Promise<void> {
-    const excludedTabs = new Set(await this.excludedTabs.get());
-    excludedTabs.add(tabId);
-    await this.excludedTabs.put(Array.from(excludedTabs));
+    await this.excludedTabs.update((excludedTabs) => {
+      return Array.from(new Set([...excludedTabs, tabId]));
+    });
     await this.extensionIconService.disableExtensionIcon(tabId);
   }
 
   public async include(tabId: TabId): Promise<void> {
-    const excludedTabs = new Set(await this.excludedTabs.get());
-    excludedTabs.delete(tabId);
-    await this.excludedTabs.put(Array.from(excludedTabs));
+    await this.excludedTabs.update((excludedTabs) => {
+      return excludedTabs.filter((id) => id !== tabId);
+    });
     await this.extensionIconService.enableExtensionIcon(tabId);
   }
 }

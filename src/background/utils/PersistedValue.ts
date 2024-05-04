@@ -1,8 +1,10 @@
 ﻿import type { IBrowserStorageAPI } from "../../api/IBrowserApiProvider";
+import { SequentialTaskQueue } from "./SequentialTaskQueue";
 import { logInfo } from "./log";
 
 export class PersistedValue<T> {
   private data: T | null = null;
+  private updateQueue: SequentialTaskQueue;
 
   constructor(
     private readonly browserStorageApi: IBrowserStorageAPI,
@@ -11,6 +13,7 @@ export class PersistedValue<T> {
     private serialize: (data: T) => string = JSON.stringify,
     private deserialize: (data: string) => T = JSON.parse,
   ) {
+    this.updateQueue = new SequentialTaskQueue();
     this.browserStorageApi.onChanged.addListener(
       this.handleStorageChanged.bind(this),
     );
@@ -35,10 +38,18 @@ export class PersistedValue<T> {
     return this.data;
   }
 
-  public async put(newData: T): Promise<void> {
-    this.data = newData;
-    await this.browserStorageApi.set({
-      [this.storageKey]: this.serialize(newData),
+  public async update(updater: (currentValue: T) => T): Promise<T> {
+    // make sure the updates are processed in order to avoid race conditions
+    return await this.updateQueue.addTask(async () => {
+      const currentValue = await this.get();
+      const updatedValue = updater(currentValue);
+
+      this.data = updatedValue;
+      await this.browserStorageApi.set({
+        [this.storageKey]: this.serialize(updatedValue),
+      });
+
+      return updatedValue;
     });
   }
 
