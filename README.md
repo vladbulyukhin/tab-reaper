@@ -18,5 +18,6 @@ organized browsing experience.
 
 ## Features
 
-- On the options page of the extension you can specify the number of minutes after which the inactive tab will be closed by Tab Reaper and whether tab reaper should close pinned, grouped or audible tabs.
-- You can temporarily disable Tab Reaper for the active tab by clicking the action button.
+- **Auto-Tab Management**: Set your preferences in the settings page of the extension's popup window, including auto-close timing for inactive tabs and exclusion for pinned, grouped, or audible tabs.
+- **Temporary Disable**: Easily disable Tab Reaper for the active tab directly from the main page of the extension's popup window, perfect for ensuring important tabs remain open.
+- **Session History**: View a list of recently closed tabs on the main page of the extension's popup window, allowing for quick recovery of closed sessions.
