@@ -4,6 +4,7 @@
 <p align="center">
   <img src="https://img.shields.io/github/license/vladbulyukhin/tab-reaper" alt="licence" />
   <a href="https://chrome.google.com/webstore/detail/tab-reaper-idle-tab-colle/lpdcbkckljbnkjbajmjhehdilncjjgii"><img src="https://img.shields.io/chrome-web-store/v/lpdcbkckljbnkjbajmjhehdilncjjgii" alt="chrome store" /></a>
+  <img src="https://img.shields.io/chrome-web-store/users/lpdcbkckljbnkjbajmjhehdilncjjgii" alt="extension users" />
 </p>
 <p align="center">
     Tab Reaper identifies tabs that haven't been used for a while and closes them, ensuring a <strong>clutter-free workspace</strong>.
