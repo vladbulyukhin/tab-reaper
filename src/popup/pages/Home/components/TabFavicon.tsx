@@ -16,7 +16,7 @@ export const TabFavicon: React.FC<ITabFaviconProps> = ({ url }) => {
       onError={() => setUsePlaceholder(true)}
     />
   ) : (
-    <div className="w-6 h-6 bg-gray-200 rounded-lg" />
+    <div className="w-6 h-6 min-w-6 min-h-6 bg-gray-200 rounded-lg" />
   );
 };
 
