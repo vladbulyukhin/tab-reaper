@@ -2,6 +2,7 @@ export interface IConfiguration {
   readonly keepAudibleTabs: boolean;
   readonly keepGroupedTabs: boolean;
   readonly keepPinnedTabs: boolean;
+  readonly removeExactDuplicates: boolean;
   readonly tabRemovalDelayMin: number;
   readonly version: number;
 }
@@ -10,8 +11,9 @@ export const emptyConfiguration: IConfiguration = {
   keepAudibleTabs: true,
   keepGroupedTabs: true,
   keepPinnedTabs: true,
+  removeExactDuplicates: false,
   tabRemovalDelayMin: 30,
-  version: 2,
+  version: 3,
 };
 
 export const toConfiguration = (
@@ -25,4 +27,6 @@ export const toConfiguration = (
   keepPinnedTabs: obj.keepPinnedTabs ?? emptyConfiguration.keepPinnedTabs,
   keepGroupedTabs: obj.keepGroupedTabs ?? emptyConfiguration.keepGroupedTabs,
   keepAudibleTabs: obj.keepAudibleTabs ?? emptyConfiguration.keepAudibleTabs,
+  removeExactDuplicates:
+    obj.removeExactDuplicates ?? emptyConfiguration.removeExactDuplicates,
 });

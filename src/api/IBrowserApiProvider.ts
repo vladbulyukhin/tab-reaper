@@ -37,6 +37,7 @@ export interface IBrowserTabAPI {
   get(tabId: number): Promise<chrome.tabs.Tab>;
   onActivated: chrome.tabs.TabActivatedEvent;
   onCreated: chrome.tabs.TabCreatedEvent;
+  onUpdated: chrome.tabs.TabUpdatedEvent;
   onRemoved: chrome.tabs.TabRemovedEvent;
   query(
     queryInfo: chrome.tabs.QueryInfo,

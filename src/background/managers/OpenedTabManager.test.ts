@@ -127,6 +127,60 @@ describe("OpenedTabManager", () => {
     });
   });
 
+  describe("onTabUpdated", () => {
+    it("should remove duplicate tabs when feature is enabled", async () => {
+      configurationManager.get.mockReturnValue(
+        Promise.resolve({ ...emptyConfiguration, removeExactDuplicates: true }),
+      );
+
+      const originalTab = createTestTab();
+      originalTab.url = "https://example.com?foo=bar";
+      const copyTab = structuredClone(originalTab);
+
+      const newTab = createTestTab();
+      newTab.url = "https://example.com?foo=bar";
+
+      browserApiProvider.tab.query.mockReturnValue(
+        Promise.resolve([originalTab, copyTab]),
+      );
+
+      const listener =
+        browserApiProvider.tab.onUpdated.addListener.mock.calls[0][0];
+      await listener(newTab.id, { url: newTab.url }, newTab);
+
+      expect(browserApiProvider.tab.remove).toHaveBeenCalledWith(
+        originalTab.id,
+      );
+      expect(browserApiProvider.tab.remove).toHaveBeenCalledWith(copyTab.id);
+    });
+
+    it("shouldn't remove duplicate tabs when feature is disabled", async () => {
+      configurationManager.get.mockReturnValue(
+        Promise.resolve({
+          ...emptyConfiguration,
+          removeExactDuplicates: false,
+        }),
+      );
+
+      const originalTab = createTestTab();
+      originalTab.url = "https://example.com?foo=bar";
+      const copyTab = structuredClone(originalTab);
+
+      const newTab = createTestTab();
+      newTab.url = "https://example.com?foo=bar";
+
+      browserApiProvider.tab.query.mockReturnValue(
+        Promise.resolve([originalTab, copyTab]),
+      );
+
+      const listener =
+        browserApiProvider.tab.onUpdated.addListener.mock.calls[0][0];
+      await listener(newTab.id, { url: newTab.url }, newTab);
+
+      expect(browserApiProvider.tab.remove).not.toHaveBeenCalled();
+    });
+  });
+
   function createTestTab(): chrome.tabs.Tab & { id: number } {
     return {
       active: false,
@@ -134,7 +188,7 @@ describe("OpenedTabManager", () => {
       discarded: false,
       groupId: 0,
       highlighted: false,
-      id: 1,
+      id: Math.floor(Math.random() * 1000),
       incognito: false,
       index: 0,
       pinned: false,
