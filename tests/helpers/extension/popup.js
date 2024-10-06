@@ -9,3 +9,8 @@ document.getElementById("groupTabsButton").addEventListener("click", () => {
     });
   });
 });
+
+document.getElementById("createTabButton").addEventListener("click", () => {
+  const input = document.getElementById("tabUrl");
+  chrome.tabs.create({ url: input.value });
+});

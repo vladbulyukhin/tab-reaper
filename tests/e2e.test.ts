@@ -2,6 +2,9 @@ import { expect, test } from "./helpers/fixtures";
 import { SettingsPage } from "./pages/OptionsPage";
 import { TestHelperExtensionPage } from "./pages/TestHelperExtensionPage";
 
+const waitFor = (ms: number) =>
+  new Promise((resolve) => setTimeout(resolve, ms));
+
 test("should close idle tabs after specified inactivity time", async ({
   page,
   context,
@@ -51,8 +54,40 @@ test("should keep pinned and grouped tabs based on user settings", async ({
 
   await page.bringToFront();
 
-  await new Promise((resolve) => setTimeout(resolve, 15_000));
-  const finalPageCount = await context.pages().length;
+  await waitFor(15_000);
+  const finalPageCount = (await context.pages()).length;
 
   expect(finalPageCount).toBe(8);
+});
+
+test("[EXPERIMENTAL] should close duplicate tabs based on user settings", async ({
+  page,
+  context,
+  extensionId,
+  helperExtensionId,
+}) => {
+  const optionsPage = new SettingsPage(page, extensionId);
+
+  await optionsPage.goto();
+  await optionsPage.setPinnedTabs(false);
+  await optionsPage.setAudibleTabs(false);
+  await optionsPage.setGroupedTabs(false);
+  await optionsPage.setRemoveExactDuplicates(true);
+
+  const helperPage = new TestHelperExtensionPage(
+    await context.newPage(),
+    helperExtensionId,
+  );
+
+  await helperPage.goto();
+  await helperPage.createNewTab("https://www.example.com");
+  await helperPage.createNewTab("https://www.example.com");
+  await helperPage.createNewTab("https://www.example.org");
+  await helperPage.createNewTab("https://www.example.org");
+
+  await waitFor(5_000);
+  const pages = await context.pages();
+  const finalPageCount = (await context.pages()).length;
+
+  expect(finalPageCount).toBe(4); // main extension + helper extension + example.com + example.org
 });
