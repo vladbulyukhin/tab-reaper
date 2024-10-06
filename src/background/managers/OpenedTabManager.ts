@@ -50,6 +50,7 @@ export class OpenedTabManager implements IOpenedTabManager {
     this.registerOpenTabs = this.registerOpenTabs.bind(this);
     this.onTabActivated = this.onTabActivated.bind(this);
     this.onTabCreated = this.onTabCreated.bind(this);
+    this.onTabUpdated = this.onTabUpdated.bind(this);
     this.onTabRemoved = this.onTabRemoved.bind(this);
 
     this.tabAlarmManager.onAlarm(this.removeTab.bind(this));
@@ -70,6 +71,7 @@ export class OpenedTabManager implements IOpenedTabManager {
 
     this.browserApiProvider.tab.onActivated.addListener(this.onTabActivated);
     this.browserApiProvider.tab.onCreated.addListener(this.onTabCreated);
+    this.browserApiProvider.tab.onUpdated.addListener(this.onTabUpdated);
     this.browserApiProvider.tab.onRemoved.addListener(this.onTabRemoved);
   }
 
@@ -80,6 +82,43 @@ export class OpenedTabManager implements IOpenedTabManager {
 
   private async onTabCreated(tab: chrome.tabs.Tab): Promise<void> {
     await this.scheduleTabRemoval(tab.id);
+
+    if (tab.id) {
+      await this.removeDuplicatesIfNecessary(tab.id, tab.url ?? null);
+    }
+  }
+
+  private async onTabUpdated(
+    tabId: TabId,
+    tabUpdateInfo: chrome.tabs.TabChangeInfo,
+  ) {
+    await this.removeDuplicatesIfNecessary(tabId, tabUpdateInfo.url ?? null);
+  }
+
+  private async removeDuplicatesIfNecessary(
+    tabId: TabId,
+    url: string | null,
+  ): Promise<void> {
+    if (!url) {
+      return;
+    }
+
+    const config = await this.configurationManager.get();
+    if (!config?.removeExactDuplicates) {
+      return;
+    }
+
+    const duplicates = await this.browserApiProvider.tab.query({
+      active: false,
+      url,
+    });
+
+    for (const duplicate of duplicates) {
+      // Do not remove the updated tab itself to avoid disrupting user's workflow
+      if (duplicate.id && duplicate.id !== tabId) {
+        await this.removeTab(duplicate.id);
+      }
+    }
   }
 
   private async onTabActivated(
@@ -112,6 +151,10 @@ export class OpenedTabManager implements IOpenedTabManager {
       tab = await this.browserApiProvider.tab.get(tabId);
     } catch (e) {
       logInfo("Tab not found", tabId, e);
+      return;
+    }
+
+    if (!tab) {
       return;
     }
 

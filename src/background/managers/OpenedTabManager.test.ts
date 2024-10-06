@@ -3,6 +3,7 @@ import { type DeepMockProxy, mockDeep } from "vitest-mock-extended";
 import type { IBrowserApiProvider } from "../../api/IBrowserApiProvider";
 import { emptyConfiguration } from "../../common/models/Configuration";
 import type { TabId, WindowId } from "../../types";
+import { CircularQueue } from "../utils/CircularQueue";
 import type { IConfigurationManager } from "./ConfigurationManager";
 import type { IExcludedTabManager } from "./ExcludedTabManager";
 import type { IExtensionActionManager } from "./ExtensionActionManager";
@@ -20,7 +21,10 @@ describe("OpenedTabManager", () => {
   beforeEach(() => {
     browserApiProvider = mockDeep<IBrowserApiProvider>();
     browserApiProvider.sessionStorage.get.mockReturnValue(
-      Promise.resolve({ previousActiveTabByWindow: {} }),
+      Promise.resolve({
+        previousActiveTabByWindow: {},
+        recentlyRemovedTabs: new CircularQueue(10),
+      }),
     );
 
     tabAlarmManager = mockDeep<ITabAlarmManager>();
@@ -127,14 +131,97 @@ describe("OpenedTabManager", () => {
     });
   });
 
+  describe("onTabUpdated", () => {
+    it("should remove duplicate tabs when feature is enabled", async () => {
+      configurationManager.get.mockReturnValue(
+        Promise.resolve({
+          ...emptyConfiguration,
+          keepGroupedTabs: true,
+          removeExactDuplicates: true,
+        }),
+      );
+
+      const originalTab = createTestTab();
+      originalTab.url = "https://example.com?foo=bar";
+      const copyTab = structuredClone(originalTab);
+
+      const groupedCopyTab = createTestTab();
+      groupedCopyTab.url = "https://example.com?foo=bar";
+      groupedCopyTab.groupId = 1;
+
+      const newTab = createTestTab();
+      newTab.url = "https://example.com?foo=bar";
+
+      browserApiProvider.tab.query.mockReturnValue(
+        Promise.resolve([originalTab, copyTab, groupedCopyTab]),
+      );
+
+      browserApiProvider.tab.get.mockReturnValueOnce(
+        Promise.resolve(originalTab),
+      );
+
+      browserApiProvider.tab.get.mockReturnValueOnce(Promise.resolve(copyTab));
+      browserApiProvider.tab.get.mockReturnValueOnce(
+        Promise.resolve(groupedCopyTab),
+      );
+
+      browserApiProvider.runtime.getLastError.mockReturnValue(undefined);
+      excludedTabManager.isExcluded.mockReturnValue(Promise.resolve(false));
+
+      const listener =
+        browserApiProvider.tab.onUpdated.addListener.mock.calls[0][0];
+      await listener(newTab.id, { url: newTab.url }, newTab);
+
+      expect(browserApiProvider.tab.remove).toHaveBeenCalledWith(
+        originalTab.id,
+      );
+      expect(browserApiProvider.tab.remove).toHaveBeenCalledWith(copyTab.id);
+
+      expect(browserApiProvider.tab.remove).not.toHaveBeenCalledWith(
+        groupedCopyTab.id,
+      );
+
+      expect(
+        extensionActionManager.incrementBadgeCounter,
+      ).toHaveBeenCalledTimes(2);
+    });
+
+    it("shouldn't remove duplicate tabs when feature is disabled", async () => {
+      configurationManager.get.mockReturnValue(
+        Promise.resolve({
+          ...emptyConfiguration,
+          removeExactDuplicates: false,
+        }),
+      );
+
+      const originalTab = createTestTab();
+      originalTab.url = "https://example.com?foo=bar";
+      const copyTab = structuredClone(originalTab);
+
+      const newTab = createTestTab();
+      newTab.url = "https://example.com?foo=bar";
+
+      browserApiProvider.tab.query.mockReturnValue(
+        Promise.resolve([originalTab, copyTab]),
+      );
+
+      const listener =
+        browserApiProvider.tab.onUpdated.addListener.mock.calls[0][0];
+      await listener(newTab.id, { url: newTab.url }, newTab);
+
+      expect(browserApiProvider.tab.remove).not.toHaveBeenCalled();
+    });
+  });
+
   function createTestTab(): chrome.tabs.Tab & { id: number } {
     return {
+      audible: false,
       active: false,
       autoDiscardable: false,
       discarded: false,
-      groupId: 0,
+      groupId: -1,
       highlighted: false,
-      id: 1,
+      id: Math.floor(Math.random() * 1000),
       incognito: false,
       index: 0,
       pinned: false,

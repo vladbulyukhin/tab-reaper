@@ -58,6 +58,7 @@ const chromeTabAPI: IBrowserTabAPI = {
   get: chrome.tabs.get,
   onActivated: chrome.tabs.onActivated,
   onCreated: chrome.tabs.onCreated,
+  onUpdated: chrome.tabs.onUpdated,
   onRemoved: chrome.tabs.onRemoved,
   query: chrome.tabs.query,
   remove: chrome.tabs.remove,
