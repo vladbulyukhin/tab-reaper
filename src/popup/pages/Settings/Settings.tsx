@@ -4,6 +4,7 @@ import { useCallback, useContext, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { emptyConfiguration } from "../../../common/models/Configuration";
+import { Badge } from "../../components/Badge";
 import {
   Form,
   FormControl,
@@ -21,6 +22,7 @@ const formSchema = z.object({
   keepAudibleTabs: z.boolean(),
   keepGroupedTabs: z.boolean(),
   keepPinnedTabs: z.boolean(),
+  removeExactDuplicates: z.boolean(),
   tabRemovalDelayMin: z.coerce.number().positive(),
 });
 
@@ -138,6 +140,32 @@ export const Settings: React.FC = () => {
               <FormControl>
                 <Switch
                   data-testid="keepAudibleTabs"
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="removeExactDuplicates"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-center justify-between gap-20">
+              <div className="flex flex-col gap-1">
+                <FormLabel className="flex items-center gap-1">
+                  Remove duplicates
+                  <Badge variant="outline">EXPERIMENTAL</Badge>
+                </FormLabel>
+                <FormDescription>
+                  Automatically close a tab when a new tab with the same URL is
+                  opened.
+                </FormDescription>
+              </div>
+              <FormControl>
+                <Switch
+                  data-testid="removeExactDuplicates"
                   checked={field.value}
                   onCheckedChange={field.onChange}
                 />

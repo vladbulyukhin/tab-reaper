@@ -47,4 +47,13 @@ export class SettingsPage {
     await input.fill(minutes.toString());
     await input.blur();
   }
+
+  async setRemoveExactDuplicates(enabled: boolean) {
+    const input = this.page.getByTestId("removeExactDuplicates");
+    if (enabled) {
+      await input.check();
+    } else {
+      await input.uncheck();
+    }
+  }
 }
