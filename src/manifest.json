@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Tab Reaper: Idle Tab Collector",
-  "description": "Automatically closes idle tabs, freeing up clutter and helping you stay focused on what matters most.",
+  "description": "Automatically closes idle and duplicate tabs, freeing up clutter and helping you stay focused on what matters most.",
   "version": "0.2.1",
   "permissions": ["alarms", "tabs", "storage"],
   "icons": {
