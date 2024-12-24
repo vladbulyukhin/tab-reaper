@@ -22,7 +22,7 @@
   "license": "GPL-3.0",
   "devDependencies": {
     "@biomejs/biome": "1.6.2",
-    "@crxjs/vite-plugin": "^2.0.0-beta.19",
+    "@crxjs/vite-plugin": "^2.0.0-beta.28",
     "@playwright/test": "^1.38.1",
     "@types/chrome": "^0.0.235",
     "@types/node": "^20.11.30",
