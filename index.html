@@ -1,0 +1,405 @@
+<!doctype html>
+<html lang="en" style="visibility: hidden">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/tab-reaper/logo.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>
+      Tab Reaper - Automatically Close Idle and Duplicate Browser Tabs
+    </title>
+    <meta
+      name="description"
+      content="Tab Reaper is an open-source Chrome extension that automatically closes idle and duplicate tabs, freeing up browser clutter and helping you stay focused on what matters most."
+    />
+    <meta
+      name="keywords"
+      content="tab manager, browser extension, Chrome extension, productivity tool, tab organizer, duplicate tabs, browser cleanup, memory saver"
+    />
+    <meta name="robots" content="index, follow" />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta
+      property="og:url"
+      content="https://vladbulyukhin.github.io/tab-reaper/"
+    />
+    <meta
+      property="og:title"
+      content="Tab Reaper - Automatically Close Idle and Duplicate Tabs"
+    />
+    <meta
+      property="og:description"
+      content="Tab Reaper automatically closes idle and duplicate tabs, freeing up browser clutter and boosting productivity. Open-source Chrome extension."
+    />
+    <meta property="og:image" content="/tab-reaper/social.png" />
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta
+      property="twitter:url"
+      content="https://vladbulyukhin.github.io/tab-reaper/"
+    />
+    <meta
+      property="twitter:title"
+      content="Tab Reaper - Automatically Close Idle and Duplicate Tabs"
+    />
+    <meta
+      property="twitter:description"
+      content="Tab Reaper automatically closes idle and duplicate tabs, freeing up browser clutter and boosting productivity. Open-source Chrome extension."
+    />
+    <meta property="twitter:image" content="/social.png" />
+
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "Tab Reaper",
+        "applicationCategory": "BrowserApplication",
+        "operatingSystem": "Chrome",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        },
+        "description": "Tab Reaper automatically closes idle and duplicate tabs, freeing up browser clutter and boosting productivity.",
+        "author": {
+          "@type": "Organization",
+          "name": "Tab Reaper",
+          "url": "https://vladbulyukhin.github.io/tab-reaper/"
+        },
+        "downloadUrl": "https://chromewebstore.google.com/detail/lpdcbkckljbnkjbajmjhehdilncjjgii",
+        "softwareVersion": "1.0.0",
+        "releaseNotes": "Automatically close idle and duplicate tabs to declutter your browser"
+      }
+    </script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <script>
+      // Show content only after styles are loaded
+      document.documentElement.style.visibility = "visible";
+    </script>
+    <script type="module" crossorigin src="/tab-reaper/assets/index-DREKLnaZ.js"></script>
+    <link rel="stylesheet" crossorigin href="/tab-reaper/assets/index-CGG46btV.css">
+  </head>
+  <body class="font-sans antialiased text-gray-900">
+    <nav
+      class="fixed inset-x-0 top-0 bg-white/90 backdrop-blur-md z-50 border-b border-gray-100"
+    >
+      <div
+        class="max-w-6xl mx-auto flex items-center justify-between px-6 py-4"
+      >
+        <div class="flex items-center space-x-2">
+          <img src="/tab-reaper/logo.png" alt="Tab Reaper logo" class="h-8 w-8" />
+          <span class="font-semibold text-lg">Tab Reaper</span>
+        </div>
+        <div class="flex items-center space-x-4">
+          <a
+            href="https://github.com/vladbulyukhin/tab-reaper"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="inline-flex items-center px-5 py-2.5 bg-gray-900 text-white font-medium rounded-lg text-sm hover:bg-gray-800 transition-all duration-200 shadow-sm hover:shadow-md"
+          >
+            <svg
+              class="w-5 h-5 sm:mr-2"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+            >
+              <path
+                d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"
+              />
+            </svg>
+            <span class="hidden sm:inline">GitHub</span>
+          </a>
+          <a
+            href="https://chromewebstore.google.com/detail/lpdcbkckljbnkjbajmjhehdilncjjgii"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="inline-flex items-center px-5 py-2.5 bg-[#FF4C4C] text-white font-medium rounded-lg text-sm hover:opacity-90 transition-all duration-200 shadow-sm hover:shadow-md"
+          >
+            <svg
+              class="w-5 h-5 sm:mr-2"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+            >
+              <path
+                d="M12 0C8.21 0 4.831 1.757 2.632 4.501l3.953 6.848A5.454 5.454 0 0 1 12 6.545h10.691A12 12 0 0 0 12 0zM1.931 5.47A11.943 11.943 0 0 0 0 12c0 6.012 4.42 10.991 10.189 11.864l3.953-6.847a5.45 5.45 0 0 1-6.865-2.29zm13.342 2.166a5.446 5.446 0 0 1 1.45 7.09l.002.001h-.002l-5.344 9.257c.206.01.413.016.621.016 6.627 0 12-5.373 12-12 0-1.54-.29-3.011-.818-4.364zM12 16.364a4.364 4.364 0 1 1 0-8.728 4.364 4.364 0 0 1 0 8.728Z"
+              />
+            </svg>
+            <span class="hidden sm:inline">Add to Chrome</span>
+          </a>
+        </div>
+      </div>
+    </nav>
+
+    <header class="relative pt-32 pb-20 overflow-hidden bg-gray-50">
+      <div id="hero-tab-container" class="absolute inset-0 pointer-events-none">
+        <!-- Tab cards will be dynamically inserted here -->
+      </div>
+      <div class="relative z-10 container mx-auto px-6">
+        <div
+          class="max-w-4xl mx-auto text-center space-y-8 bg-gray-50/60 backdrop-blur-xs rounded-3xl p-8"
+        >
+          <img src="/tab-reaper/logo.png" alt="" class="w-24 h-24 mx-auto floating" />
+          <h1 class="text-6xl font-bold tracking-tight">
+            Keep Your Tabs
+            <span class="text-[#FF4C4C]">Under Control</span>
+          </h1>
+          <p class="text-xl text-gray-600 max-w-2xl mx-auto">
+            Automatically closes idle & duplicate tabs so you can focus on what
+            matters. Stay organized without lifting a finger.
+          </p>
+          <div
+            id="hero-install-button"
+            class="flex items-center justify-center space-x-4"
+          >
+            <a
+              href="https://chromewebstore.google.com/detail/lpdcbkckljbnkjbajmjhehdilncjjgii"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="inline-flex items-center px-8 py-4 bg-[#FF4C4C] text-white font-semibold rounded-lg hover:opacity-90 transition-all duration-200 shadow-lg hover:shadow-xl"
+            >
+              <svg class="w-6 h-6 mr-3" viewBox="0 0 24 24" fill="currentColor">
+                <path
+                  d="M12 0C8.21 0 4.831 1.757 2.632 4.501l3.953 6.848A5.454 5.454 0 0 1 12 6.545h10.691A12 12 0 0 0 12 0zM1.931 5.47A11.943 11.943 0 0 0 0 12c0 6.012 4.42 10.991 10.189 11.864l3.953-6.847a5.45 5.45 0 0 1-6.865-2.29zm13.342 2.166a5.446 5.446 0 0 1 1.45 7.09l.002.001h-.002l-5.344 9.257c.206.01.413.016.621.016 6.627 0 12-5.373 12-12 0-1.54-.29-3.011-.818-4.364zM12 16.364a4.364 4.364 0 1 1 0-8.728 4.364 4.364 0 0 1 0 8.728Z"
+                />
+              </svg>
+              Install Extension
+            </a>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <section class="py-20 bg-white border-t-1 border-gray-100">
+      <div class="container mx-auto px-6">
+        <h2 class="text-4xl font-bold text-center mb-16">
+          Powerful Tab Management
+        </h2>
+        <div class="grid md:grid-cols-2 gap-12 max-w-5xl mx-auto">
+          <div class="space-y-4">
+            <div class="flex items-start space-x-4">
+              <div
+                class="flex-shrink-0 w-12 h-12 rounded-lg bg-[#FF4C4C]/10 flex items-center justify-center"
+              >
+                <svg
+                  class="w-6 h-6 text-[#FF4C4C]"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"
+                  ></path>
+                </svg>
+              </div>
+              <div>
+                <h3 class="font-semibold text-lg">Auto-Tab Management</h3>
+                <p class="text-gray-600 text-justify">
+                  Set your preferences for auto-closing inactive tabs with
+                  flexible options for pinned, grouped, and audible tabs.
+                </p>
+              </div>
+            </div>
+            <div class="flex items-start space-x-4">
+              <div
+                class="flex-shrink-0 w-12 h-12 rounded-lg bg-[#FF4C4C]/10 flex items-center justify-center"
+              >
+                <svg
+                  class="w-6 h-6 text-[#FF4C4C]"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                  ></path>
+                </svg>
+              </div>
+              <div>
+                <h3 class="font-semibold text-lg">Temporary Disable</h3>
+                <p class="text-gray-600 text-justify">
+                  Keep important tabs open by easily disabling Tab Reaper for
+                  specific tabs.
+                </p>
+              </div>
+            </div>
+          </div>
+          <div class="space-y-4">
+            <div class="flex items-start space-x-4">
+              <div
+                class="flex-shrink-0 w-12 h-12 rounded-lg bg-[#FF4C4C]/10 flex items-center justify-center"
+              >
+                <svg
+                  class="w-6 h-6 text-[#FF4C4C]"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                  ></path>
+                </svg>
+              </div>
+              <div>
+                <h3 class="font-semibold text-lg">Session History</h3>
+                <p class="text-gray-600 text-justify">
+                  Quickly recover closed tabs with an easily accessible session
+                  history.
+                </p>
+              </div>
+            </div>
+            <div class="flex items-start space-x-4">
+              <div
+                class="flex-shrink-0 w-12 h-12 rounded-lg bg-[#FF4C4C]/10 flex items-center justify-center"
+              >
+                <svg
+                  class="w-6 h-6 text-[#FF4C4C]"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                  ></path>
+                </svg>
+              </div>
+              <div>
+                <h3 class="font-semibold text-lg">Duplicate Tabs Remover</h3>
+                <p class="text-gray-600 text-justify">
+                  Automatically close duplicate tabs to keep your browser
+                  organized.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="py-20 bg-white border-t-1 border-gray-100">
+      <div class="container mx-auto px-6 text-center">
+        <h2 class="text-4xl font-bold mb-16">Why Tab Reaper?</h2>
+        <div class="grid md:grid-cols-3 gap-12 max-w-5xl mx-auto">
+          <div class="space-y-4">
+            <div
+              class="w-16 h-16 mx-auto rounded-full bg-[#FF4C4C]/10 flex items-center justify-center"
+            >
+              <svg
+                class="w-8 h-8 text-[#FF4C4C]"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M13 10V3L4 14h7v7l9-11h-7z"
+                ></path>
+              </svg>
+            </div>
+            <h3 class="font-semibold text-lg">Better Performance</h3>
+            <p class="text-gray-600">
+              Reduce memory usage and improve browser speed by automatically
+              closing unused tabs.
+            </p>
+          </div>
+          <div class="space-y-4">
+            <div
+              class="w-16 h-16 mx-auto rounded-full bg-[#FF4C4C]/10 flex items-center justify-center"
+            >
+              <svg
+                class="w-8 h-8 text-[#FF4C4C]"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                ></path>
+              </svg>
+            </div>
+            <h3 class="font-semibold text-lg">Stay Focused</h3>
+            <p class="text-gray-600">
+              Keep your workspace clean and organized without manual
+              intervention.
+            </p>
+          </div>
+          <div class="space-y-4">
+            <div
+              class="w-16 h-16 mx-auto rounded-full bg-[#FF4C4C]/10 flex items-center justify-center"
+            >
+              <svg
+                class="w-8 h-8 text-[#FF4C4C]"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c-.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                ></path>
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                ></path>
+              </svg>
+            </div>
+            <h3 class="font-semibold text-lg">Easy to Configure</h3>
+            <p class="text-gray-600">
+              Simple settings to customize behavior according to your workflow.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section
+      id="graveyard"
+      class="relative h-screen overflow-hidden bg-gradient-to-b from-gray-50 to-gray-100"
+    >
+      <div id="tab-container" class="absolute inset-0"></div>
+      <div
+        class="relative z-10 flex flex-col items-center justify-center h-full text-center px-6"
+      >
+        <h2 class="text-4xl font-bold mb-4">Watch Idle Tabs Fade Away</h2>
+        <p class="text-xl text-gray-600 max-w-2xl">
+          Tab Reaper automatically identifies and closes unused tabs to keep
+          your browser fast and organized
+        </p>
+      </div>
+
+      <div class="absolute bottom-4 right-4 text-xs text-slate-400">
+        &copy; 2025 Tab Reaper. All rights reserved.
+      </div>
+    </section>
+
+  </body>
+</html>
