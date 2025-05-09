@@ -1,0 +1,60 @@
+@import "tailwindcss";
+
+.tab-card {
+  position: absolute;
+  background: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  width: 280px;
+  height: 48px;
+  clip-path: polygon(0 0, 20% 0, 25% 20%, 75% 20%, 80% 0, 100% 0, 100% 100%, 0 100%);
+  background: linear-gradient(to bottom, #ffffff 0%, #f8f9fa 100%);
+  border: 1px solid #e9ecef;
+  padding: 4px 0;
+  opacity: 0;
+  will-change: transform, opacity;
+  transform: translateZ(0);
+  transition: transform 4s linear, opacity 0.3s ease-in;
+}
+
+@keyframes fall {
+  0% { 
+    transform: translateY(-50px) rotate(0deg);
+    opacity: 0;
+  }
+  5% { 
+    opacity: 1;
+  }
+  100% { 
+    transform: translateY(110vh) rotate(20deg);
+    opacity: 0.8;
+  }
+}
+
+@keyframes dissolve {
+  0% {
+    transform: rotate(0deg) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(45deg) scale(0);
+    opacity: 0;
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+.floating {
+  animation: float 6s ease-in-out infinite;
+}
+
+.tab-dissolve {
+  animation: dissolve 0.5s ease-out forwards;
+}
