@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="public/icons/icon-active-128.png" />
+  <a href="https://vladbulyukhin.github.io/tab-reaper/" target="_blank"><img src="public/icons/icon-active-128.png" /></a>
 </p>
 <p align="center">
   <img src="https://img.shields.io/github/license/vladbulyukhin/tab-reaper" alt="licence" />
