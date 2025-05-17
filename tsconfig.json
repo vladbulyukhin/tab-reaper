@@ -18,9 +18,15 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "downlevelIteration": true,
-    "types": ["web-ext-types", "chrome", "node"],
+    "types": ["vitest/globals", "chrome", "node"],
     "lib": ["es2020", "dom"]
   },
-  "include": ["src/**/*.ts", "global.d.ts"],
-  "exclude": ["node_modules"]
+  "include": ["src", "tests", "./.wxt/wxt.d.ts", "./src/global.d.ts"],
+  "exclude": [
+    "node_modules",
+    "playwright.config.ts",
+    "wxt.config.ts",
+    "landing",
+    "tests"
+  ]
 }

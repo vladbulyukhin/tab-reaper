@@ -1,5 +1,5 @@
 import type React from "react";
-import type { RemovedTab } from "../../../../common/models/Tab";
+import type { RemovedTab } from "../../../../../common/models/Tab";
 import { timeSince } from "../../../utils";
 import { TabFavicon } from "./TabFavicon";
 

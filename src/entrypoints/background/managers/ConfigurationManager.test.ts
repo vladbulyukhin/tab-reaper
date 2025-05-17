@@ -1,4 +1,4 @@
-﻿import { beforeEach, describe, expect, it } from "vitest";
+﻿import { Mock, beforeEach, describe, expect, it } from "vitest";
 import { type DeepMockProxy, mockDeep } from "vitest-mock-extended";
 import type { IBrowserApiProvider } from "../../../api/IBrowserApiProvider";
 import {
@@ -84,10 +84,9 @@ describe("ConfigurationManager", () => {
           newValue: { ...emptyConfiguration, tabRemovalDelayMin },
         },
       };
-      browserApiProvider.syncStorage.onChanged.addListener.mock.calls[0][0](
-        newConfiguration,
-        "session"
-      );
+      (
+        browserApiProvider.syncStorage.onChanged.addListener as Mock
+      ).mock.calls[0][0](newConfiguration, "session");
 
       const result = await configurationManager.get();
       expect(result.tabRemovalDelayMin).toBe(tabRemovalDelayMin);
@@ -104,10 +103,9 @@ describe("ConfigurationManager", () => {
 
       // Trigger the event manually by calling the event listener with the mock changes
       const newConfiguration = { unrelated: { newValue: { unrelated: true } } };
-      browserApiProvider.syncStorage.onChanged.addListener.mock.calls[0][0](
-        newConfiguration,
-        "session"
-      );
+      (
+        browserApiProvider.syncStorage.onChanged.addListener as Mock
+      ).mock.calls[0][0](newConfiguration, "session");
 
       const result = await configurationManager.get();
       expect(result).toEqual(emptyConfiguration);

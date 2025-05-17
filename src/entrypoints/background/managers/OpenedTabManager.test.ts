@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, Mock } from "vitest";
 import { type DeepMockProxy, mockDeep } from "vitest-mock-extended";
 import type { IBrowserApiProvider } from "../../../api/IBrowserApiProvider";
 import { emptyConfiguration } from "../../../common/models/Configuration";
@@ -51,8 +51,8 @@ describe("OpenedTabManager", () => {
     it("should clear existing timeouts", async () => {
       const tabId: TabId = 1;
 
-      const listener =
-        browserApiProvider.tab.onRemoved.addListener.mock.calls[0][0];
+      const listener = (browserApiProvider.tab.onRemoved.addListener as Mock)
+        .mock.calls[0][0];
       await listener(tabId, { windowId: 1, isWindowClosing: false });
 
       expect(tabAlarmManager.clearAlarm).toHaveBeenCalledWith(tabId);
@@ -64,8 +64,8 @@ describe("OpenedTabManager", () => {
       const windowId: WindowId = 1;
       const tabId: TabId = 2;
 
-      const listener =
-        browserApiProvider.tab.onActivated.addListener.mock.calls[0][0];
+      const listener = (browserApiProvider.tab.onActivated.addListener as Mock)
+        .mock.calls[0][0];
       await listener({ windowId, tabId });
 
       expect(tabAlarmManager.clearAlarm).toHaveBeenCalledWith(tabId);
@@ -75,8 +75,8 @@ describe("OpenedTabManager", () => {
       const windowId: WindowId = 1;
       const initialTabId: TabId = 2;
 
-      const listener =
-        browserApiProvider.tab.onActivated.addListener.mock.calls[0][0];
+      const listener = (browserApiProvider.tab.onActivated.addListener as Mock)
+        .mock.calls[0][0];
       await listener({ windowId, tabId: initialTabId });
 
       const tabId: TabId = 3;
@@ -92,8 +92,8 @@ describe("OpenedTabManager", () => {
       const windowId: WindowId = 1;
       const initialTabId: TabId = 2;
 
-      const listener =
-        browserApiProvider.tab.onActivated.addListener.mock.calls[0][0];
+      const listener = (browserApiProvider.tab.onActivated.addListener as Mock)
+        .mock.calls[0][0];
       await listener({ windowId, tabId: initialTabId });
 
       const tabId: TabId = 3;
@@ -109,8 +109,8 @@ describe("OpenedTabManager", () => {
     it("should plan removal of created tab", async () => {
       const tab = createTestTab();
 
-      const listener =
-        browserApiProvider.tab.onCreated.addListener.mock.calls[0][0];
+      const listener = (browserApiProvider.tab.onCreated.addListener as Mock)
+        .mock.calls[0][0];
       await listener(tab);
 
       expect(tabAlarmManager.setAlarm).toHaveBeenCalledWith(
@@ -123,8 +123,8 @@ describe("OpenedTabManager", () => {
       const tab = createTestTab();
       excludedTabManager.isExcluded.mockReturnValue(Promise.resolve(true));
 
-      const listener =
-        browserApiProvider.tab.onCreated.addListener.mock.calls[0][0];
+      const listener = (browserApiProvider.tab.onCreated.addListener as Mock)
+        .mock.calls[0][0];
       await listener(tab);
 
       expect(tabAlarmManager.setAlarm).not.toHaveBeenCalled();
@@ -168,8 +168,8 @@ describe("OpenedTabManager", () => {
       browserApiProvider.runtime.getLastError.mockReturnValue(undefined);
       excludedTabManager.isExcluded.mockReturnValue(Promise.resolve(false));
 
-      const listener =
-        browserApiProvider.tab.onUpdated.addListener.mock.calls[0][0];
+      const listener = (browserApiProvider.tab.onUpdated.addListener as Mock)
+        .mock.calls[0][0];
       await listener(newTab.id, { url: newTab.url }, newTab);
 
       expect(browserApiProvider.tab.remove).toHaveBeenCalledWith(
@@ -205,8 +205,8 @@ describe("OpenedTabManager", () => {
         Promise.resolve([originalTab, copyTab])
       );
 
-      const listener =
-        browserApiProvider.tab.onUpdated.addListener.mock.calls[0][0];
+      const listener = (browserApiProvider.tab.onUpdated.addListener as Mock)
+        .mock.calls[0][0];
       await listener(newTab.id, { url: newTab.url }, newTab);
 
       expect(browserApiProvider.tab.remove).not.toHaveBeenCalled();

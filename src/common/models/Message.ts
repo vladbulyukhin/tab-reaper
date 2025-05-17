@@ -1,4 +1,4 @@
-import type { SharedKeys } from "../../background/utils/SharedKeys";
+import type { SharedKeys } from "../../entrypoints/background/utils/SharedKeys";
 import type { IConfiguration } from "./Configuration";
 import type { RemovedTab } from "./Tab";
 

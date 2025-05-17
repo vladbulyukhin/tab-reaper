@@ -1,4 +1,4 @@
-﻿import { beforeEach, describe, expect, it, vi } from "vitest";
+﻿import { beforeEach, describe, expect, it, Mock, vi } from "vitest";
 import { type DeepMockProxy, mockDeep } from "vitest-mock-extended";
 import type { IBrowserApiProvider } from "../../../api/IBrowserApiProvider";
 import type { TabId } from "../../../types";
@@ -49,7 +49,7 @@ describe("TabAlarmManager", () => {
 
       await tabAlarmManager.onAlarm(spy);
 
-      browserApiProvider.alarm.onAlarm.addListener.mock.calls[0][0]({
+      (browserApiProvider.alarm.onAlarm.addListener as Mock).mock.calls[0][0]({
         name: `tab:${tabId}`,
         scheduledTime: 0,
       });
