@@ -23,7 +23,7 @@ export const test = base.extend<{
     const context = await chromium.launchPersistentContext("", {
       headless: false,
       args: [
-        // "--headless=new",
+        "--headless=new",
         `--disable-extensions-except=${pathToHelperExtension},${pathToExtension}`,
         `--load-extension=${pathToHelperExtension},${pathToExtension}`,
       ],
