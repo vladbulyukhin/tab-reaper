@@ -11,11 +11,11 @@ export class PersistedValue<T> {
     private readonly storageKey: string,
     private readonly defaultValue: T,
     private serialize: (data: T) => string = JSON.stringify,
-    private deserialize: (data: string) => T = JSON.parse
+    private deserialize: (data: string) => T = JSON.parse,
   ) {
     this.updateQueue = new SequentialTaskQueue();
     this.browserStorageApi.onChanged.addListener(
-      this.handleStorageChanged.bind(this)
+      this.handleStorageChanged.bind(this),
     );
   }
 

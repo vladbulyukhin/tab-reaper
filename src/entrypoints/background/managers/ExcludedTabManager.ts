@@ -17,12 +17,12 @@ export class ExcludedTabManager implements IExcludedTabManager {
       IBrowserApiProvider,
       "sessionStorage"
     >,
-    private readonly extensionIconService: IExtensionActionManager
+    private readonly extensionIconService: IExtensionActionManager,
   ) {
     this.excludedTabs = new PersistedValue<ReadonlyArray<TabId>>(
       this.browserApiProvider.sessionStorage,
       "excludedTabs",
-      []
+      [],
     );
   }
 

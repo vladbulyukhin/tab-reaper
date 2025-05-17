@@ -18,12 +18,12 @@ export class ConfigurationManager implements IConfigurationManager {
     private readonly browserApiProvider: Pick<
       IBrowserApiProvider,
       "syncStorage"
-    >
+    >,
   ) {
     this.configuration = new PersistedValue<IConfiguration>(
       this.browserApiProvider.syncStorage,
       "configuration",
-      emptyConfiguration
+      emptyConfiguration,
     );
   }
 

@@ -33,7 +33,7 @@ export class OpenedTabManager implements IOpenedTabManager {
     private readonly tabAlarmManager: ITabAlarmManager,
     private readonly excludedTabManager: IExcludedTabManager,
     private readonly configurationManager: IConfigurationManager,
-    private readonly extensionActionManager: IExtensionActionManager
+    private readonly extensionActionManager: IExtensionActionManager,
   ) {
     this.previousActiveTabByWindow = new PersistedValue<
       Record<WindowId, TabId>
@@ -44,7 +44,7 @@ export class OpenedTabManager implements IOpenedTabManager {
       "recentlyRemovedTabs",
       new CircularQueue(RecentlyClosedTabsBufferSize),
       (data) => data.toJSON(),
-      CircularQueue.fromJSON
+      CircularQueue.fromJSON,
     );
 
     this.registerOpenTabs = this.registerOpenTabs.bind(this);
@@ -63,10 +63,10 @@ export class OpenedTabManager implements IOpenedTabManager {
 
   public async watchTabs(): Promise<void> {
     this.browserApiProvider.runtime.onInstalled.addListener(
-      this.registerOpenTabs
+      this.registerOpenTabs,
     );
     this.browserApiProvider.runtime.onStartup.addListener(
-      this.registerOpenTabs
+      this.registerOpenTabs,
     );
 
     this.browserApiProvider.tab.onActivated.addListener(this.onTabActivated);
@@ -90,14 +90,14 @@ export class OpenedTabManager implements IOpenedTabManager {
 
   private async onTabUpdated(
     tabId: TabId,
-    tabUpdateInfo: chrome.tabs.TabChangeInfo
+    tabUpdateInfo: chrome.tabs.TabChangeInfo,
   ) {
     await this.removeDuplicatesIfNecessary(tabId, tabUpdateInfo.url ?? null);
   }
 
   private async removeDuplicatesIfNecessary(
     tabId: TabId,
-    url: string | null
+    url: string | null,
   ): Promise<void> {
     if (!url) {
       return;
@@ -122,7 +122,7 @@ export class OpenedTabManager implements IOpenedTabManager {
   }
 
   private async onTabActivated(
-    activeInfo: chrome.tabs.TabActiveInfo
+    activeInfo: chrome.tabs.TabActiveInfo,
   ): Promise<void> {
     const { windowId, tabId } = activeInfo;
 
@@ -195,7 +195,7 @@ export class OpenedTabManager implements IOpenedTabManager {
     if (lastError) {
       logInfo(
         "OpenedTabManager: tab cannot be removed because of the error: ",
-        lastError
+        lastError,
       );
       return false;
     }

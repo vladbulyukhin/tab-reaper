@@ -4,8 +4,8 @@ import { useCallback, useContext, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import {
+  type IConfiguration,
   emptyConfiguration,
-  IConfiguration,
 } from "../../../../common/models/Configuration";
 import { Badge } from "../../components/Badge";
 import {
@@ -42,22 +42,27 @@ export const Settings: React.FC = () => {
     },
   });
 
+  const {
+    handleSubmit,
+    formState: { isDirty },
+  } = form;
+
   const onSubmit = useCallback(
     (values: z.infer<typeof formSchema>) => {
       sendMessage?.("setConfig", values);
     },
-    [sendMessage]
+    [sendMessage],
   );
 
   useEffect(() => {
     const id = setTimeout(() => {
-      if (form.formState.isDirty) {
-        form.handleSubmit(onSubmit)();
+      if (isDirty) {
+        handleSubmit(onSubmit)();
       }
     }, 200);
 
     return () => clearTimeout(id);
-  }, [form.watch(), onSubmit]);
+  }, [isDirty, handleSubmit, onSubmit]);
 
   return (
     <Form {...form}>

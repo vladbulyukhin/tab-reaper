@@ -18,7 +18,7 @@
     "postinstall": "wxt prepare",
     "typecheck": "tsc --noEmit",
     "lint": "pnpm dlx @biomejs/biome ci ./src ./tests --config-path=./",
-    "lint:fix": "pnpm dlx @biomejs/biome ci ./src ./tests --config-path=./ --fix",
+    "lint:fix": "pnpm dlx @biomejs/biome check ./src ./tests --config-path=./ --write",
     "test:e2e": "npx playwright test --headed",
     "test:unit": "vitest --dir ./src/",
     "test:unit:ci": "npm run test:unit -- --run"

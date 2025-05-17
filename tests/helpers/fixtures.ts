@@ -33,11 +33,11 @@ export const test = base.extend<{
   },
   backgroundPage: async (
     { context }: { context: BrowserContext },
-    use: (bg: Worker) => Promise<void>
+    use: (bg: Worker) => Promise<void>,
   ) => {
     const serviceWorkers = context.serviceWorkers();
     let background = serviceWorkers.find((w) =>
-      w.url().includes("background.js")
+      w.url().includes("background.js"),
     );
 
     if (!background) {

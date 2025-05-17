@@ -28,7 +28,7 @@ export const BackgroundCommunicationProvider: React.FC<
 
   const value = useMemo(
     () => ({ sendMessage: messageService.sendMessage }),
-    [messageService]
+    [messageService],
   );
 
   return (

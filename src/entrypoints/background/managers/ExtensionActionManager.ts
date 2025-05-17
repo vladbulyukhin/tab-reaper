@@ -32,12 +32,12 @@ export class ExtensionActionManager implements IExtensionActionManager {
     private readonly browserApiProvider: Pick<
       IBrowserApiProvider,
       "action" | "sessionStorage"
-    >
+    >,
   ) {
     this.badgeCount = new PersistedValue(
       browserApiProvider.sessionStorage,
       "badgeCount",
-      0
+      0,
     );
 
     this.badgeUpdateQueue = new SequentialTaskQueue();

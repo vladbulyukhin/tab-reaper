@@ -1,4 +1,4 @@
-﻿import { Mock, beforeEach, describe, expect, it } from "vitest";
+﻿import { type Mock, beforeEach, describe, expect, it } from "vitest";
 import { type DeepMockProxy, mockDeep } from "vitest-mock-extended";
 import type { IBrowserApiProvider } from "../../../api/IBrowserApiProvider";
 import {
@@ -22,7 +22,7 @@ describe("ConfigurationManager", () => {
   describe("get", () => {
     it("should load configuration from storage on the first call", async () => {
       browserApiProvider.syncStorage.get.mockReturnValue(
-        Promise.resolve({ configuration: emptyConfiguration })
+        Promise.resolve({ configuration: emptyConfiguration }),
       );
 
       const result = await configurationManager.get();
@@ -33,7 +33,7 @@ describe("ConfigurationManager", () => {
 
     it("shouldn't load configuration from storage on the second and further calls", async () => {
       browserApiProvider.syncStorage.get.mockReturnValue(
-        Promise.resolve({ configuration: emptyConfiguration })
+        Promise.resolve({ configuration: emptyConfiguration }),
       );
 
       await configurationManager.get();
@@ -48,7 +48,7 @@ describe("ConfigurationManager", () => {
     it("should merge passed configuration with existing", async () => {
       // load cache
       browserApiProvider.syncStorage.get.mockReturnValue(
-        Promise.resolve({ configuration: emptyConfiguration })
+        Promise.resolve({ configuration: emptyConfiguration }),
       );
       await configurationManager.get();
 
@@ -70,11 +70,11 @@ describe("ConfigurationManager", () => {
   describe("handleConfigurationChanged", async () => {
     it("should update cached configuration when it changes in the storage", async () => {
       browserApiProvider.syncStorage.get.mockReturnValue(
-        Promise.resolve({ configuration: emptyConfiguration })
+        Promise.resolve({ configuration: emptyConfiguration }),
       );
       const initial = await configurationManager.get();
       expect(initial.tabRemovalDelayMin).toBe(
-        emptyConfiguration.tabRemovalDelayMin
+        emptyConfiguration.tabRemovalDelayMin,
       );
 
       // Trigger the event manually by calling the event listener with the mock changes
@@ -94,11 +94,11 @@ describe("ConfigurationManager", () => {
 
     it("should not update configuration with unrelated changes in storage", async () => {
       browserApiProvider.syncStorage.get.mockReturnValue(
-        Promise.resolve({ configuration: emptyConfiguration })
+        Promise.resolve({ configuration: emptyConfiguration }),
       );
       const initial = await configurationManager.get();
       expect(initial.tabRemovalDelayMin).toBe(
-        emptyConfiguration.tabRemovalDelayMin
+        emptyConfiguration.tabRemovalDelayMin,
       );
 
       // Trigger the event manually by calling the event listener with the mock changes

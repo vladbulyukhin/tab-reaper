@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, Mock } from "vitest";
+import { type Mock, beforeEach, describe, expect, it } from "vitest";
 import { type DeepMockProxy, mockDeep } from "vitest-mock-extended";
 import type { IBrowserApiProvider } from "../../../api/IBrowserApiProvider";
 import { emptyConfiguration } from "../../../common/models/Configuration";
@@ -24,7 +24,7 @@ describe("OpenedTabManager", () => {
       Promise.resolve({
         previousActiveTabByWindow: {},
         recentlyRemovedTabs: new CircularQueue(10),
-      })
+      }),
     );
 
     tabAlarmManager = mockDeep<ITabAlarmManager>();
@@ -33,7 +33,7 @@ describe("OpenedTabManager", () => {
 
     configurationManager = mockDeep<IConfigurationManager>();
     configurationManager.get.mockReturnValue(
-      Promise.resolve(emptyConfiguration)
+      Promise.resolve(emptyConfiguration),
     );
 
     openedTabManager = new OpenedTabManager(
@@ -41,7 +41,7 @@ describe("OpenedTabManager", () => {
       tabAlarmManager,
       excludedTabManager,
       configurationManager,
-      extensionActionManager
+      extensionActionManager,
     );
 
     openedTabManager.watchTabs();
@@ -84,7 +84,7 @@ describe("OpenedTabManager", () => {
 
       expect(tabAlarmManager.setAlarm).toHaveBeenCalledWith(
         initialTabId,
-        emptyConfiguration.tabRemovalDelayMin
+        emptyConfiguration.tabRemovalDelayMin,
       );
     });
 
@@ -115,7 +115,7 @@ describe("OpenedTabManager", () => {
 
       expect(tabAlarmManager.setAlarm).toHaveBeenCalledWith(
         tab.id,
-        expect.any(Number)
+        expect.any(Number),
       );
     });
 
@@ -138,7 +138,7 @@ describe("OpenedTabManager", () => {
           ...emptyConfiguration,
           keepGroupedTabs: true,
           removeExactDuplicates: true,
-        })
+        }),
       );
 
       const originalTab = createTestTab();
@@ -153,16 +153,16 @@ describe("OpenedTabManager", () => {
       newTab.url = "https://example.com?foo=bar";
 
       browserApiProvider.tab.query.mockReturnValue(
-        Promise.resolve([originalTab, copyTab, groupedCopyTab])
+        Promise.resolve([originalTab, copyTab, groupedCopyTab]),
       );
 
       browserApiProvider.tab.get.mockReturnValueOnce(
-        Promise.resolve(originalTab)
+        Promise.resolve(originalTab),
       );
 
       browserApiProvider.tab.get.mockReturnValueOnce(Promise.resolve(copyTab));
       browserApiProvider.tab.get.mockReturnValueOnce(
-        Promise.resolve(groupedCopyTab)
+        Promise.resolve(groupedCopyTab),
       );
 
       browserApiProvider.runtime.getLastError.mockReturnValue(undefined);
@@ -173,16 +173,16 @@ describe("OpenedTabManager", () => {
       await listener(newTab.id, { url: newTab.url }, newTab);
 
       expect(browserApiProvider.tab.remove).toHaveBeenCalledWith(
-        originalTab.id
+        originalTab.id,
       );
       expect(browserApiProvider.tab.remove).toHaveBeenCalledWith(copyTab.id);
 
       expect(browserApiProvider.tab.remove).not.toHaveBeenCalledWith(
-        groupedCopyTab.id
+        groupedCopyTab.id,
       );
 
       expect(
-        extensionActionManager.incrementBadgeCounter
+        extensionActionManager.incrementBadgeCounter,
       ).toHaveBeenCalledTimes(2);
     });
 
@@ -191,7 +191,7 @@ describe("OpenedTabManager", () => {
         Promise.resolve({
           ...emptyConfiguration,
           removeExactDuplicates: false,
-        })
+        }),
       );
 
       const originalTab = createTestTab();
@@ -202,7 +202,7 @@ describe("OpenedTabManager", () => {
       newTab.url = "https://example.com?foo=bar";
 
       browserApiProvider.tab.query.mockReturnValue(
-        Promise.resolve([originalTab, copyTab])
+        Promise.resolve([originalTab, copyTab]),
       );
 
       const listener = (browserApiProvider.tab.onUpdated.addListener as Mock)

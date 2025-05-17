@@ -31,12 +31,12 @@ export class BackgroundService implements IBackgroundService {
   constructor(private readonly browserApiProvider: IBrowserApiProvider) {
     const tabAlarmManager = new TabAlarmManager(browserApiProvider);
     const extensionActionManager = new ExtensionActionManager(
-      browserApiProvider
+      browserApiProvider,
     );
 
     this.excludedTabManager = new ExcludedTabManager(
       browserApiProvider,
-      extensionActionManager
+      extensionActionManager,
     );
     this.configurationManager = new ConfigurationManager(browserApiProvider);
     this.openedTabManager = new OpenedTabManager(
@@ -44,7 +44,7 @@ export class BackgroundService implements IBackgroundService {
       tabAlarmManager,
       this.excludedTabManager,
       this.configurationManager,
-      extensionActionManager
+      extensionActionManager,
     );
     this.messageService = new MessageService(browserApiProvider);
   }
@@ -60,7 +60,7 @@ export class BackgroundService implements IBackgroundService {
       async (_payload, _sender, sendResponse) => {
         const configuration = await this.configurationManager.get();
         sendResponse(configuration);
-      }
+      },
     );
 
     this.messageService.onMessage(
@@ -72,7 +72,7 @@ export class BackgroundService implements IBackgroundService {
         } catch (e) {
           sendResponse({ status: "error" });
         }
-      }
+      },
     );
 
     this.messageService.onMessage(
@@ -85,13 +85,13 @@ export class BackgroundService implements IBackgroundService {
 
         if (currentTab?.id) {
           const isExcluded = await this.excludedTabManager.isExcluded(
-            currentTab.id
+            currentTab.id,
           );
           sendResponse(isExcluded);
         } else {
           sendResponse(false);
         }
-      }
+      },
     );
 
     this.messageService.onMessage(
@@ -116,7 +116,7 @@ export class BackgroundService implements IBackgroundService {
         } else {
           sendResponse({ status: "error" });
         }
-      }
+      },
     );
 
     this.messageService.onMessage(
@@ -125,7 +125,7 @@ export class BackgroundService implements IBackgroundService {
         const recentlyClosedTabs =
           await this.openedTabManager.getRecentlyClosed();
         sendResponse({ tabs: recentlyClosedTabs });
-      }
+      },
     );
 
     this.messageService.listen();

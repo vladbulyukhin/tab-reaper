@@ -11,7 +11,7 @@ export interface ITabAlarmManager {
 
 export class TabAlarmManager implements ITabAlarmManager {
   constructor(
-    private readonly browserApiProvider: Pick<IBrowserApiProvider, "alarm">
+    private readonly browserApiProvider: Pick<IBrowserApiProvider, "alarm">,
   ) {}
 
   public async setAlarm(tabId: TabId, delayInMinutes: number): Promise<void> {

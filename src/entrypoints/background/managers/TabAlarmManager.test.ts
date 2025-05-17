@@ -1,4 +1,4 @@
-﻿import { beforeEach, describe, expect, it, Mock, vi } from "vitest";
+﻿import { type Mock, beforeEach, describe, expect, it, vi } from "vitest";
 import { type DeepMockProxy, mockDeep } from "vitest-mock-extended";
 import type { IBrowserApiProvider } from "../../../api/IBrowserApiProvider";
 import type { TabId } from "../../../types";
@@ -23,7 +23,7 @@ describe("TabAlarmManager", () => {
         `tab:${tabId}`,
         {
           delayInMinutes: delay,
-        }
+        },
       );
     });
 
@@ -37,7 +37,7 @@ describe("TabAlarmManager", () => {
       await tabAlarmManager.setAlarm(tabId, delay);
       expect(browserApiProvider.alarm.clear).toHaveBeenCalledTimes(1);
       expect(browserApiProvider.alarm.clear).toHaveBeenLastCalledWith(
-        `tab:${tabId}`
+        `tab:${tabId}`,
       );
     });
   });
