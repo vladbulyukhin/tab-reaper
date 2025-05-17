@@ -8,7 +8,7 @@ export class SettingsPage {
 
   async goto() {
     await this.page.goto(
-      `chrome-extension://${this.extensionId}/src/popup/index.html#/settings`,
+      `chrome-extension://${this.extensionId}/popup.html#/settings`,
     );
   }
 

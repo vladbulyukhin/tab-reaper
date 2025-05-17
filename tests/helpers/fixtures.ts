@@ -19,7 +19,7 @@ export const test = base.extend<{
   // biome-ignore lint/correctness/noEmptyPattern: This is required for playwright to work
   context: async ({}, use) => {
     const pathToHelperExtension = path.join(__dirname, "./extension");
-    const pathToExtension = path.join(__dirname, "../../dist");
+    const pathToExtension = path.join(__dirname, "../../.output/chrome-mv3");
     const context = await chromium.launchPersistentContext("", {
       headless: false,
       args: [
@@ -37,12 +37,12 @@ export const test = base.extend<{
   ) => {
     const serviceWorkers = context.serviceWorkers();
     let background = serviceWorkers.find((w) =>
-      w.url().includes("service-worker-loader.js"),
+      w.url().includes("background.js"),
     );
 
     if (!background) {
       const serviceWorker = await context.waitForEvent("serviceworker");
-      background = serviceWorker.url().includes("service-worker-loader.js")
+      background = serviceWorker.url().includes("background.js")
         ? serviceWorker
         : await context.waitForEvent("serviceworker");
     }

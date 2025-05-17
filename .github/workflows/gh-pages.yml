@@ -10,20 +10,23 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-      - name: Setup Node
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Use Node.js 20
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: "pnpm"
 
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
         working-directory: ./landing
 
       - name: Build project
-        run: npm run build
+        run: pnpm run build
         working-directory: ./landing
 
       - name: Deploy to GitHub Pages
