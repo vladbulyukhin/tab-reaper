@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import type React from "react";
-import { useCallback, useContext, useEffect } from "react";
+import { useCallback, useContext, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import {
@@ -42,10 +42,9 @@ export const Settings: React.FC = () => {
     },
   });
 
-  const {
-    handleSubmit,
-    formState: { isDirty },
-  } = form;
+  const { handleSubmit, formState } = form;
+  const isFirstRun = useRef(true);
+  const debounceTimerRef = useRef<number | null>(null);
 
   const onSubmit = useCallback(
     (values: z.infer<typeof formSchema>) => {
@@ -55,14 +54,30 @@ export const Settings: React.FC = () => {
   );
 
   useEffect(() => {
-    const id = setTimeout(() => {
-      if (isDirty) {
-        handleSubmit(onSubmit)();
+    if (isFirstRun.current) {
+      if (formState.isDirty) {
+        isFirstRun.current = false;
       }
-    }, 200);
+      return;
+    }
 
-    return () => clearTimeout(id);
-  }, [isDirty, handleSubmit, onSubmit]);
+    if (formState.isDirty) {
+      if (debounceTimerRef.current !== null) {
+        clearTimeout(debounceTimerRef.current);
+      }
+
+      debounceTimerRef.current = window.setTimeout(() => {
+        handleSubmit(onSubmit)();
+        debounceTimerRef.current = null;
+      }, 200);
+    }
+
+    return () => {
+      if (debounceTimerRef.current !== null) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, [formState, handleSubmit, onSubmit]);
 
   return (
     <Form {...form}>

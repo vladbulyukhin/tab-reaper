@@ -14,6 +14,7 @@ test("should close idle tabs after specified inactivity time", async ({
 
   await optionsPage.goto();
   await optionsPage.setIdlePeriod(0.2);
+  await waitFor(1_000);
 
   const example1 = await context.newPage();
   await example1.goto("https://www.example.com");
@@ -40,6 +41,7 @@ test("should keep pinned and grouped tabs based on user settings", async ({
 
   await optionsPage.goto();
   await optionsPage.setIdlePeriod(0.2);
+  await waitFor(1_000);
 
   const helperPage = new TestHelperExtensionPage(
     await context.newPage(),
@@ -73,6 +75,7 @@ test("[EXPERIMENTAL] should close duplicate tabs based on user settings", async 
   await optionsPage.setAudibleTabs(false);
   await optionsPage.setGroupedTabs(false);
   await optionsPage.setRemoveExactDuplicates(true);
+  await waitFor(1_000);
 
   const helperPage = new TestHelperExtensionPage(
     await context.newPage(),
