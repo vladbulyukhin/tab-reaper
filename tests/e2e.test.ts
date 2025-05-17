@@ -43,7 +43,7 @@ test("should keep pinned and grouped tabs based on user settings", async ({
 
   const helperPage = new TestHelperExtensionPage(
     await context.newPage(),
-    helperExtensionId,
+    helperExtensionId
   );
 
   await helperPage.goto();
@@ -76,7 +76,7 @@ test("[EXPERIMENTAL] should close duplicate tabs based on user settings", async 
 
   const helperPage = new TestHelperExtensionPage(
     await context.newPage(),
-    helperExtensionId,
+    helperExtensionId
   );
 
   await helperPage.goto();

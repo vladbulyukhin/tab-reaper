@@ -22,4 +22,3 @@ organized browsing experience.
 - **Temporary Disable**: Easily disable Tab Reaper for the active tab directly from the main page of the extension's popup window, perfect for ensuring important tabs remain open.
 - **Session History**: View a list of recently closed tabs on the main page of the extension's popup window, allowing for quick recovery of closed sessions.
 - **Duplicate Tabs Remover**: Automatically close a tab when a new tab with the same URL is opened.
-

@@ -3,12 +3,12 @@ import type { Page } from "@playwright/test";
 export class SettingsPage {
   constructor(
     private readonly page: Page,
-    private readonly extensionId: string,
+    private readonly extensionId: string
   ) {}
 
   async goto() {
     await this.page.goto(
-      `chrome-extension://${this.extensionId}/src/popup/index.html#/settings`,
+      `chrome-extension://${this.extensionId}/popup.html#/settings`
     );
   }
 
