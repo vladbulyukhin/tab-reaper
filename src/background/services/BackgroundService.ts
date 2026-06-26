@@ -128,6 +128,53 @@ export class BackgroundService implements IBackgroundService {
       },
     );
 
+    this.messageService.onMessage(
+      "sweepDuplicates",
+      async (_payload, _sender, sendResponse) => {
+        const tabs = await this.browserApiProvider.tab.query({
+          currentWindow: true,
+        });
+        const eligible = tabs.filter(
+          (t) =>
+            !t.pinned &&
+            !t.audible &&
+            (t.groupId === undefined || t.groupId === -1) &&
+            typeof t.url === "string" &&
+            t.url.length > 0 &&
+            typeof t.id === "number",
+        );
+        const groups = new Map<string, chrome.tabs.Tab[]>();
+        for (const t of eligible) {
+          const url = t.url as string;
+          const list = groups.get(url) ?? [];
+          list.push(t);
+          groups.set(url, list);
+        }
+        let closed = 0;
+        let kept = 0;
+        for (const list of groups.values()) {
+          if (list.length === 1) {
+            kept += 1;
+            continue;
+          }
+          list.sort((a, b) => (a.id ?? 0) - (b.id ?? 0));
+          kept += 1;
+          for (let i = 1; i < list.length; i++) {
+            const id = list[i].id;
+            if (typeof id === "number") {
+              try {
+                await this.browserApiProvider.tab.remove(id);
+                closed += 1;
+              } catch {
+                // tab may have closed between query and remove; ignore
+              }
+            }
+          }
+        }
+        sendResponse({ closed, kept });
+      },
+    );
+
     this.messageService.listen();
   }
 }

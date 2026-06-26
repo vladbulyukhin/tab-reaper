@@ -8,6 +8,7 @@ export type MessagePayloads = {
   isCurrentTabExcluded: undefined;
   setCurrentTabExcluded: { excluded: boolean };
   getRecentlyClosedTabs: undefined;
+  sweepDuplicates: undefined;
 };
 
 export type MessageResponses = {
@@ -16,6 +17,7 @@ export type MessageResponses = {
   isCurrentTabExcluded: boolean;
   setCurrentTabExcluded: { status: string };
   getRecentlyClosedTabs: { tabs: RemovedTab[] };
+  sweepDuplicates: { closed: number; kept: number };
 };
 
 export type MessageTypes = SharedKeys<MessagePayloads, MessageResponses>;
