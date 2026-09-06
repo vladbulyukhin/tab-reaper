@@ -23,3 +23,13 @@ organized browsing experience.
 - **Session History**: View a list of recently closed tabs on the main page of the extension's popup window, allowing for quick recovery of closed sessions.
 - **Duplicate Tabs Remover**: Automatically close a tab when a new tab with the same URL is opened.
 
+## License and brand
+
+Except for the brand assets listed below and third-party components that retain
+their own licenses, the source code in this revision is available under the
+[Mozilla Public License 2.0](LICENSE).
+
+The Tab Reaper name, logo, icons, and associated visual identity are not
+licensed under the MPL. See [BRAND.md](BRAND.md) for permitted uses. Versions
+published before the MPL transition remain available under the license that
+applied to those versions.
