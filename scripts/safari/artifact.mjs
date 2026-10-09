@@ -302,6 +302,14 @@ export function validateManifest(manifest, availableResources) {
     errors.push("manifest_version must be 2");
   }
 
+  // App Store Connect rejects Safari extensions whose description is longer.
+  if (
+    typeof manifest.description !== "string" ||
+    manifest.description.length > 112
+  ) {
+    errors.push("description must be a string of 112 or fewer characters");
+  }
+
   if ("action" in manifest) {
     errors.push("action is not supported; use browser_action");
   }

@@ -15,6 +15,7 @@ import { afterEach, expect, it } from "vitest";
 const validManifest = {
   manifest_version: 2,
   version: "0.2.1",
+  description: "Closes idle tabs.",
   permissions: ["alarms", "tabs", "storage"],
   browser_action: { default_popup: "src/popup/index.html" },
   background: { persistent: true, scripts: ["background.js"] },
@@ -436,6 +437,11 @@ it.each([
     /background.scripts/,
   ],
   ["missing icon paths", { ...validManifest, icons: {} }, /icons/],
+  [
+    "descriptions App Store Connect rejects",
+    { ...validManifest, description: "x".repeat(113) },
+    /description/,
+  ],
 ])("rejects %s", async (_description, manifest, expectedError) => {
   const { validateManifest } = await artifact();
 
