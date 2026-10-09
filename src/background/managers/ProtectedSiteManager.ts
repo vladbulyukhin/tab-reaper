@@ -56,6 +56,19 @@ const matchesHostname = (hostname: string, rule: string): boolean => {
   return hostname === rule || hostname.endsWith(`.${rule}`);
 };
 
+// The most specific rule wins, so removing a child rule can leave a parent.
+export const findMatchingRule = (
+  sites: ReadonlyArray<string>,
+  hostname: string,
+): string | null =>
+  sites.reduce<string | null>(
+    (match, rule) =>
+      matchesHostname(hostname, rule) && (!match || rule.length > match.length)
+        ? rule
+        : match,
+    null,
+  );
+
 export class ProtectedSiteManager implements IProtectedSiteManager {
   private readonly sites: SyncedValue<ReadonlyArray<string>>;
   constructor(
@@ -81,7 +94,7 @@ export class ProtectedSiteManager implements IProtectedSiteManager {
     const host = hostnameFromInput(hostnameOrUrl);
     if (!host) return;
     await this.sites.update((current) => {
-      const matching = this.matchingRule(current, host);
+      const matching = findMatchingRule(current, host);
       return current.filter((rule) => rule !== matching);
     });
   }
@@ -90,24 +103,11 @@ export class ProtectedSiteManager implements IProtectedSiteManager {
   ): Promise<string | null> {
     if (!hostnameOrUrl) return null;
     const host = hostnameFromInput(hostnameOrUrl);
-    return host ? this.matchingRule(await this.list(), host) : null;
+    return host ? findMatchingRule(await this.list(), host) : null;
   }
   public async isProtectedUrl(
     url: string | null | undefined,
   ): Promise<boolean> {
     return (await this.getMatchingRule(url)) !== null;
-  }
-  private matchingRule(
-    sites: ReadonlyArray<string>,
-    hostname: string,
-  ): string | null {
-    return sites.reduce<string | null>(
-      (match, rule) =>
-        matchesHostname(hostname, rule) &&
-        (!match || rule.length > match.length)
-          ? rule
-          : match,
-      null,
-    );
   }
 }

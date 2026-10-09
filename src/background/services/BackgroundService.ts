@@ -24,7 +24,10 @@ import {
   type IOpenedTabManager,
   OpenedTabManager,
 } from "../managers/OpenedTabManager";
-import { ProtectedSiteManager } from "../managers/ProtectedSiteManager";
+import {
+  ProtectedSiteManager,
+  findMatchingRule,
+} from "../managers/ProtectedSiteManager";
 import { SnoozeManager } from "../managers/SnoozeManager";
 import { TabAlarmManager } from "../managers/TabAlarmManager";
 import { toKeepDiagnosticsTab } from "../utils/DiagnosticTabs";
@@ -33,6 +36,9 @@ type RescheduleOptions = Parameters<
   IOpenedTabManager["rescheduleOpenTabs"]
 >[0] &
   object;
+
+const errorMessage = (error: unknown): string =>
+  error instanceof Error ? error.message : String(error);
 
 export interface IBackgroundService {
   start(): void;
@@ -188,85 +194,43 @@ export class BackgroundService implements IBackgroundService {
     this.registerSafetyHandler(
       "setCurrentTabExcluded",
       async (payload, _sender, sendResponse) => {
+        const requestedExcluded = payload.excluded;
+        let tab: Record<string, unknown> | null = null;
+        const record = (event: string, details: Record<string, unknown> = {}) =>
+          this.openedTabManager.recordKeepStateDiagnostic(event, {
+            ...details,
+            requestedExcluded,
+            tab,
+          });
         try {
           const [currentTab] = await this.browserApiProvider.tab.query({
             active: true,
             currentWindow: true,
           });
-
-          if (typeof currentTab?.id === "number") {
-            const diagnosticTab = toKeepDiagnosticsTab(currentTab);
-            this.openedTabManager.recordKeepStateDiagnostic(
-              "keep-state-write-requested",
-              {
-                requestedExcluded: payload.excluded,
-                tab: diagnosticTab,
-              },
-            );
-            try {
-              if (payload.excluded) {
-                await this.excludedTabManager.exclude(currentTab.id);
-              } else {
-                await this.excludedTabManager.include(currentTab.id);
-              }
-              const storedExcluded = await this.excludedTabManager.isExcluded(
-                currentTab.id,
-                currentTab.url,
-              );
-              if (storedExcluded !== payload.excluded) {
-                this.openedTabManager.recordKeepStateDiagnostic(
-                  "keep-state-write-failed",
-                  {
-                    requestedExcluded: payload.excluded,
-                    storedExcluded,
-                    tab: diagnosticTab,
-                  },
-                );
-                sendResponse({ status: "error" });
-                return;
-              }
-              this.openedTabManager.recordKeepStateDiagnostic(
-                "keep-state-write-completed",
-                {
-                  requestedExcluded: payload.excluded,
-                  storedExcluded,
-                  tab: diagnosticTab,
-                },
-              );
-              sendResponse({ status: "ok" });
-            } catch (error) {
-              logInfo("setCurrentTabExcluded failed", error);
-              this.openedTabManager.recordKeepStateDiagnostic(
-                "keep-state-write-failed",
-                {
-                  message: (error as Error)?.message ?? String(error),
-                  requestedExcluded: payload.excluded,
-                  tab: diagnosticTab,
-                },
-              );
-              sendResponse({ status: "error" });
-            }
-          } else {
-            this.openedTabManager.recordKeepStateDiagnostic(
-              "keep-state-write-failed",
-              {
-                message: "No active tab resolved",
-                requestedExcluded: payload.excluded,
-                tab: null,
-              },
-            );
-            sendResponse({ status: "error" });
+          if (typeof currentTab?.id !== "number") {
+            throw new Error("No active tab resolved");
           }
+          tab = toKeepDiagnosticsTab(currentTab);
+          record("keep-state-write-requested");
+          if (requestedExcluded) {
+            await this.excludedTabManager.exclude(currentTab.id);
+          } else {
+            await this.excludedTabManager.include(currentTab.id);
+          }
+          // Confirm by reading back, so the popup never shows an unsaved Keep.
+          const storedExcluded = await this.excludedTabManager.isExcluded(
+            currentTab.id,
+            currentTab.url,
+          );
+          const saved = storedExcluded === requestedExcluded;
+          record(
+            saved ? "keep-state-write-completed" : "keep-state-write-failed",
+            { storedExcluded },
+          );
+          sendResponse({ status: saved ? "ok" : "error" });
         } catch (error) {
           logInfo("setCurrentTabExcluded failed", error);
-          this.openedTabManager.recordKeepStateDiagnostic(
-            "keep-state-write-failed",
-            {
-              message: (error as Error)?.message ?? String(error),
-              requestedExcluded: payload.excluded,
-              tab: null,
-            },
-          );
+          record("keep-state-write-failed", { message: errorMessage(error) });
           sendResponse({ status: "error" });
         }
       },
@@ -368,12 +332,11 @@ export class BackgroundService implements IBackgroundService {
             return;
           }
 
-          const supportedHostname = hostname;
-          const protectedNow = (await this.protectedSiteManager.list()).some(
-            (rule) =>
-              supportedHostname === rule ||
-              supportedHostname.endsWith(`.${rule}`),
-          );
+          const protectedNow =
+            findMatchingRule(
+              await this.protectedSiteManager.list(),
+              hostname,
+            ) !== null;
           sendResponse({ protected: protectedNow, hostname, supported: true });
         } catch (error) {
           logInfo("isCurrentSiteProtected failed", error);
@@ -408,12 +371,11 @@ export class BackgroundService implements IBackgroundService {
             await this.protectedSiteManager.remove(hostname);
           }
 
-          const supportedHostname = hostname;
-          const protectedNow = (await this.protectedSiteManager.list()).some(
-            (rule) =>
-              supportedHostname === rule ||
-              supportedHostname.endsWith(`.${rule}`),
-          );
+          const protectedNow =
+            findMatchingRule(
+              await this.protectedSiteManager.list(),
+              hostname,
+            ) !== null;
 
           sendResponse({
             status: "ok",

@@ -15,7 +15,7 @@ import { SequentialTaskQueue } from "../utils/SequentialTaskQueue";
 import type { IConfigurationManager } from "./ConfigurationManager";
 import type { IExcludedTabManager } from "./ExcludedTabManager";
 import type { IExtensionActionManager } from "./ExtensionActionManager";
-import { IdleTabLedger, type IdleTabRecord } from "./IdleTabLedger";
+import { IdleTabLedger } from "./IdleTabLedger";
 import type { IProtectedSiteManager } from "./ProtectedSiteManager";
 import { RecentlyClosedHistory } from "./RecentlyClosedHistory";
 import type { ISnoozeManager } from "./SnoozeManager";
@@ -54,17 +54,6 @@ type RemovalRequest = {
   expectedIdleRecord?: IdleRemovalOwnership;
   safetyRevision: number;
 };
-
-function hasCurrentIdleDeadline(
-  storedDeadline: number | undefined,
-  scheduledTime: number | undefined,
-): boolean {
-  return (
-    typeof scheduledTime !== "number" ||
-    (typeof storedDeadline === "number" &&
-      Math.abs(storedDeadline - scheduledTime) <= 1)
-  );
-}
 
 export interface IOpenedTabManager {
   beginSafetyMutation(): () => void;
@@ -579,35 +568,17 @@ export class OpenedTabManager implements IOpenedTabManager {
     sourceActivityRevision = this.lifecycle.getTabActivityRevision(tabId),
     sourceIsPendingCreation = false,
   ): Promise<void> {
-    if (
-      !this.lifecycle.isDuplicateSourceOwner(
-        tabId,
-        sourceActivityRevision,
-        sourceIsPendingCreation,
-      )
-    ) {
-      return;
-    }
-
-    if (await this.snoozeManager.isSnoozed()) {
-      return;
-    }
-
-    if (!url) {
-      return;
-    }
+    const source: DuplicateSourceOwnership = {
+      tabId,
+      activityRevision: sourceActivityRevision,
+      pendingCreation: sourceIsPendingCreation,
+    };
+    if (!this.ownsDuplicateSource(source)) return;
+    if (await this.snoozeManager.isSnoozed()) return;
+    if (!url) return;
 
     const config = await this.configurationManager.get();
-    if (!config?.removeExactDuplicates) {
-      return;
-    }
-    if (
-      !this.lifecycle.isDuplicateSourceOwner(
-        tabId,
-        sourceActivityRevision,
-        sourceIsPendingCreation,
-      )
-    ) {
+    if (!config?.removeExactDuplicates || !this.ownsDuplicateSource(source)) {
       return;
     }
 
@@ -626,15 +597,7 @@ export class OpenedTabManager implements IOpenedTabManager {
     } catch {
       return;
     }
-    if (
-      !this.lifecycle.isDuplicateSourceOwner(
-        tabId,
-        sourceActivityRevision,
-        sourceIsPendingCreation,
-      )
-    ) {
-      return;
-    }
+    if (!this.ownsDuplicateSource(source)) return;
 
     const candidates = duplicates
       .filter((tab) => this.isVisibleTab(tab))
@@ -655,31 +618,43 @@ export class OpenedTabManager implements IOpenedTabManager {
       url,
     });
 
+    // The source tab itself is never removed; only its older duplicates are.
     for (const candidate of candidates) {
-      if (
-        !this.lifecycle.isDuplicateSourceOwner(
-          tabId,
-          sourceActivityRevision,
-          sourceIsPendingCreation,
-        )
-      ) {
-        return;
-      }
-      // Do not remove the updated tab itself to avoid disrupting user's workflow
+      if (!this.ownsDuplicateSource(source)) return;
       await this.removeTab({
         tabId: candidate.tabId,
         reason: "duplicate",
         expectedGeneration: candidate.generation,
         expectedActivityRevision: candidate.activityRevision,
         expectedUrl: url,
-        expectedDuplicateSource: {
-          tabId,
-          activityRevision: sourceActivityRevision,
-          pendingCreation: sourceIsPendingCreation,
-        },
+        expectedDuplicateSource: source,
         safetyRevision: this.safetyRevision,
       });
     }
+  }
+
+  private ownsDuplicateSource(source: DuplicateSourceOwnership): boolean {
+    return this.lifecycle.isDuplicateSourceOwner(
+      source.tabId,
+      source.activityRevision,
+      source.pendingCreation,
+    );
+  }
+
+  // A queued removal acts only if nothing changed since it was requested:
+  // no protection change, no newer activity on the tab, and (for duplicates)
+  // the tab that triggered it is still the same.
+  private isRemovalRequestCurrent(request: RemovalRequest): boolean {
+    return (
+      this.pendingSafetyMutations === 0 &&
+      request.safetyRevision === this.safetyRevision &&
+      this.lifecycle.isRemovalLifecycleCurrent(
+        request.tabId,
+        request.expectedActivityRevision,
+      ) &&
+      (!request.expectedDuplicateSource ||
+        this.ownsDuplicateSource(request.expectedDuplicateSource))
+    );
   }
 
   private async onTabActivated(
@@ -689,7 +664,8 @@ export class OpenedTabManager implements IOpenedTabManager {
     const { windowId, tabId } = activeInfo;
     this.lifecycle.advanceTabActivityRevision(tabId);
 
-    await this.markTabActive(tabId);
+    await this.clearAlarm(tabId);
+    await this.idleTabLedger.markActive(tabId).catch(() => undefined);
 
     const previousActiveIds = await this.previousActiveTabByWindow.get();
     const previousId = previousActiveIds[windowId];
@@ -769,7 +745,8 @@ export class OpenedTabManager implements IOpenedTabManager {
         ) {
           return;
         }
-        await this.removeIdleRecordForTab(tabId);
+        await this.clearAlarm(tabId);
+        await this.idleTabLedger.removeTab(tabId).catch(() => undefined);
       });
     }
     this.scheduleThresholdReconcile(removeInfo?.windowId);
@@ -830,35 +807,18 @@ export class OpenedTabManager implements IOpenedTabManager {
       reason,
       scheduledTime,
       expectedGeneration,
-      expectedActivityRevision,
       expectedUrl,
-      expectedDuplicateSource,
       expectedIdleRecord,
-      safetyRevision,
     } = request;
     if (
       this.pendingSafetyMutations > 0 ||
-      safetyRevision !== this.safetyRevision
+      request.safetyRevision !== this.safetyRevision
     )
       return;
-    if (typeof tabId !== "number") {
-      return;
-    }
 
     this.recordDiagnostic("remove-attempt", { reason, tabId });
 
-    if (
-      !this.lifecycle.isRemovalLifecycleCurrent(
-        tabId,
-        expectedActivityRevision,
-      ) ||
-      (expectedDuplicateSource &&
-        !this.lifecycle.isDuplicateSourceOwner(
-          expectedDuplicateSource.tabId,
-          expectedDuplicateSource.activityRevision,
-          expectedDuplicateSource.pendingCreation,
-        ))
-    ) {
+    if (!this.isRemovalRequestCurrent(request)) {
       this.recordDiagnostic("remove-skipped-stale-lifecycle", {
         reason,
         tabId,
@@ -937,21 +897,8 @@ export class OpenedTabManager implements IOpenedTabManager {
       return;
     }
 
-    // No await is permitted between this in-memory lifecycle check and remove.
-    if (
-      this.pendingSafetyMutations > 0 ||
-      this.safetyRevision !== safetyRevision ||
-      !this.lifecycle.isRemovalLifecycleCurrent(
-        tabId,
-        expectedActivityRevision,
-      ) ||
-      (expectedDuplicateSource &&
-        !this.lifecycle.isDuplicateSourceOwner(
-          expectedDuplicateSource.tabId,
-          expectedDuplicateSource.activityRevision,
-          expectedDuplicateSource.pendingCreation,
-        ))
-    ) {
+    // No await is permitted between this in-memory check and remove.
+    if (!this.isRemovalRequestCurrent(request)) {
       this.recordDiagnostic("remove-skipped-final-lifecycle", {
         reason,
         tabId,
@@ -994,73 +941,51 @@ export class OpenedTabManager implements IOpenedTabManager {
       expectedLifecycleRevision ?? this.lifecycle.getTabActivityRevision(tabId);
     const scheduleClaim = this.lifecycle.claimTabSchedule(tabId);
     const generation = await this.lifecycle.getTabGeneration(tabId);
-    if (
-      !(await this.lifecycle.isScheduleOwner(
+    // Any newer activity or schedule for this tab supersedes this one; check
+    // after every await so stale work never writes an alarm or clears one.
+    const stillOwned = () =>
+      this.lifecycle.isScheduleOwner(
         tabId,
         generation,
         activityRevision,
         scheduleClaim,
-      ))
-    ) {
-      return;
-    }
+      );
+    const clearIfOwned = async (clearInactiveAge = false) => {
+      if (!(await stillOwned())) return;
+      await this.clearAlarm(tabId);
+      if (clearInactiveAge) {
+        await this.idleTabLedger.markActive(tabId).catch(() => undefined);
+      }
+    };
+    if (!(await stillOwned())) return;
 
     // Event/query snapshots are advisory only; eligibility and age always bind
     // to a fresh browser state for this lifecycle/schedule claim.
     const tab = await this.safeGetTab(tabId);
     if (!tab) {
       this.recordDiagnostic("schedule-skipped-tab-not-found", { tabId });
-      await this.clearOwnedSchedule(
-        tabId,
-        generation,
-        activityRevision,
-        scheduleClaim,
-      );
+      await clearIfOwned();
       return;
     }
 
     const configuration = await this.configurationManager.get();
-    if (
-      !(await this.lifecycle.isScheduleOwner(
-        tabId,
-        generation,
-        activityRevision,
-        scheduleClaim,
-      ))
-    ) {
-      return;
-    }
+    if (!(await stillOwned())) return;
 
     if (tab.active) {
       this.recordDiagnostic(
         "schedule-skipped-active",
         toCleanupDiagnosticsTab(tab),
       );
-      await this.clearOwnedSchedule(
-        tabId,
-        generation,
-        activityRevision,
-        scheduleClaim,
-        true,
-      );
+      await clearIfOwned(true);
       return;
     }
 
-    const idleRecord = await this.getOrCreateInactiveRecord(
+    const idleRecord = await this.idleTabLedger.ensureInactive(
       tab,
-      configuration.tabRemovalDelayMin,
+      configuration.tabRemovalDelayMin * 60_000,
     );
     const deadline = idleRecord.deadline;
-    if (
-      !(await this.lifecycle.isScheduleOwner(
-        tabId,
-        generation,
-        activityRevision,
-        scheduleClaim,
-      ))
-    ) {
-      return;
-    }
+    if (!(await stillOwned())) return;
 
     if (
       !deadline ||
@@ -1071,12 +996,7 @@ export class OpenedTabManager implements IOpenedTabManager {
         deadline,
         tab: toCleanupDiagnosticsTab(tab),
       });
-      await this.clearOwnedSchedule(
-        tabId,
-        generation,
-        activityRevision,
-        scheduleClaim,
-      );
+      await clearIfOwned();
       return;
     }
 
@@ -1091,25 +1011,11 @@ export class OpenedTabManager implements IOpenedTabManager {
         threshold: configuration.tabCountThreshold,
       });
       // Ensure there's no stale alarm that could fire after the threshold is met again.
-      await this.clearOwnedSchedule(
-        tabId,
-        generation,
-        activityRevision,
-        scheduleClaim,
-      );
+      await clearIfOwned();
       return;
     }
 
-    if (
-      !(await this.lifecycle.isScheduleOwner(
-        tabId,
-        generation,
-        activityRevision,
-        scheduleClaim,
-      ))
-    ) {
-      return;
-    }
+    if (!(await stillOwned())) return;
 
     await this.tabAlarmManager.setIdleAlarm(
       idleRecord.id,
@@ -1200,16 +1106,6 @@ export class OpenedTabManager implements IOpenedTabManager {
     return !threshold || threshold <= 0 || tabs.length > threshold;
   }
 
-  private async getOrCreateInactiveRecord(
-    tab: chrome.tabs.Tab,
-    delayInMinutes: number,
-  ): Promise<IdleTabRecord> {
-    return await this.idleTabLedger.ensureInactive(
-      tab,
-      delayInMinutes * 60_000,
-    );
-  }
-
   private async clearAlarm(tabId: TabId): Promise<void> {
     try {
       const record = await this.idleTabLedger.getBoundRecord(tabId);
@@ -1223,20 +1119,6 @@ export class OpenedTabManager implements IOpenedTabManager {
     } catch {}
   }
 
-  private async clearAlarmAndInactiveAge(tabId: TabId): Promise<void> {
-    await this.clearAlarm(tabId);
-    await this.idleTabLedger.markActive(tabId).catch(() => undefined);
-  }
-
-  private async markTabActive(tabId: TabId): Promise<void> {
-    await this.clearAlarmAndInactiveAge(tabId);
-  }
-
-  private async removeIdleRecordForTab(tabId: TabId): Promise<void> {
-    await this.clearAlarm(tabId);
-    await this.idleTabLedger.removeTab(tabId).catch(() => undefined);
-  }
-
   private isRemovalSafetyUpdate(
     tabUpdateInfo: chrome.tabs.TabChangeInfo,
   ): boolean {
@@ -1246,32 +1128,6 @@ export class OpenedTabManager implements IOpenedTabManager {
       "audible" in tabUpdateInfo ||
       "groupId" in tabUpdateInfo
     );
-  }
-
-  private async clearOwnedSchedule(
-    tabId: TabId,
-    generation: number,
-    activityRevision: number,
-    scheduleClaim: number,
-    clearInactiveAge = false,
-  ): Promise<void> {
-    if (
-      !(await this.lifecycle.isScheduleOwner(
-        tabId,
-        generation,
-        activityRevision,
-        scheduleClaim,
-      ))
-    ) {
-      return;
-    }
-
-    if (clearInactiveAge) {
-      await this.clearAlarmAndInactiveAge(tabId);
-      return;
-    }
-
-    await this.clearAlarm(tabId);
   }
 
   private async isPersistedRemovalIdentityCurrent(
