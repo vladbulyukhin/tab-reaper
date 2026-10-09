@@ -45,6 +45,7 @@ export const Settings: React.FC = () => {
     form,
     loaded,
     onSubmit,
+    flushSave,
     retry,
     diagnosticsEnabled,
     saveStatus,
@@ -107,6 +108,10 @@ export const Settings: React.FC = () => {
                             type="number"
                             className="h-11 w-24 rounded-xl bg-white text-center text-lg font-semibold"
                             {...field}
+                            onBlur={() => {
+                              field.onBlur();
+                              flushSave();
+                            }}
                           />
                         </FormControl>
                       </div>
@@ -137,6 +142,10 @@ export const Settings: React.FC = () => {
                             type="number"
                             className="h-11 w-24 rounded-xl bg-white text-center text-lg font-semibold"
                             {...field}
+                            onBlur={() => {
+                              field.onBlur();
+                              flushSave();
+                            }}
                           />
                         </FormControl>
                       </div>

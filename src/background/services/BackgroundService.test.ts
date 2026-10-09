@@ -268,7 +268,10 @@ describe("BackgroundService current-site protocol support", () => {
     expect(setDiagnosticsEnabled.mock.invocationCallOrder[0]).toBeLessThan(
       rescheduleOpenTabs.mock.invocationCallOrder[0],
     );
-    expect(rescheduleOpenTabs).toHaveBeenCalledTimes(2);
+    expect(rescheduleOpenTabs).toHaveBeenCalledOnce();
+    expect(rescheduleOpenTabs).toHaveBeenCalledWith({
+      recalculateIdleDeadlines: false,
+    });
   });
 
   it("clears recently closed tabs through the popup protocol", async () => {
@@ -482,7 +485,7 @@ describe("BackgroundService current-site protocol support", () => {
 
     expect(add).toHaveBeenCalledWith("sub.example.com");
     expect(remove).toHaveBeenCalledWith("sub.example.com");
-    expect(rescheduleOpenTabs).toHaveBeenCalledTimes(4);
+    expect(rescheduleOpenTabs).toHaveBeenCalledTimes(2);
     expect(sendResponse).toHaveBeenNthCalledWith(1, {
       status: "ok",
       protected: true,
@@ -524,7 +527,7 @@ describe("BackgroundService current-site protocol support", () => {
     });
   });
 
-  it("reschedules inactive tabs before confirming a removed protected rule", async () => {
+  it("reschedules inactive tabs once after removing a protected rule", async () => {
     const { getHandler, remove, rescheduleOpenTabs } = createCurrentSiteHarness(
       "https://example.com/article",
     );
@@ -537,14 +540,11 @@ describe("BackgroundService current-site protocol support", () => {
     );
 
     expect(remove).toHaveBeenCalledWith("example.com");
-    expect(rescheduleOpenTabs).toHaveBeenCalledTimes(2);
-    expect(rescheduleOpenTabs.mock.invocationCallOrder[0]).toBeLessThan(
-      sendResponse.mock.invocationCallOrder[0],
-    );
+    expect(rescheduleOpenTabs).toHaveBeenCalledOnce();
     expect(sendResponse).toHaveBeenCalledWith({ status: "ok" });
   });
 
-  it("returns an error when rescheduling after a current-site unprotect fails", async () => {
+  it("confirms a saved current-site unprotect even when the follow-up reschedule fails", async () => {
     const { getHandler, remove, rescheduleOpenTabs } = createCurrentSiteHarness(
       "https://example.com/article",
     );
@@ -558,12 +558,13 @@ describe("BackgroundService current-site protocol support", () => {
     );
 
     expect(remove).toHaveBeenCalledWith("example.com");
-    expect(sendResponse).toHaveBeenCalledWith({
-      status: "error",
-      protected: false,
-      hostname: "example.com",
-      supported: true,
-    });
+    expect(sendResponse).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "ok", hostname: "example.com" }),
+    );
+    expect(logInfo).toHaveBeenCalledWith(
+      "Failed to reconcile cleanup after a policy change",
+      expect.any(Error),
+    );
   });
 
   it("reports a valid HTTPS page as supported when protection mutation fails", async () => {

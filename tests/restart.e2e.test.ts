@@ -251,7 +251,12 @@ test.describe("extension state across Chrome worker and tab restarts", () => {
         .poll(() =>
           sendExtensionMessage(page, "getCurrentTabKeepState", undefined),
         )
-        .toEqual({ status: "ok", kept: false, uncertain: false });
+        .toEqual({
+          status: "ok",
+          kept: false,
+          uncertain: false,
+          keepsReset: false,
+        });
       await page.reload();
       await expect(homePage.getCurrentTabKeepToggle()).not.toBeChecked();
       await expect(page.getByText("Safety hold", { exact: true })).toHaveCount(

@@ -1,9 +1,16 @@
 import type { IBrowserStorageAPI } from "../../api/IBrowserApiProvider";
 import type { TabId } from "../../types";
 import { SequentialTaskQueue } from "../utils/SequentialTaskQueue";
+import { logInfo } from "../utils/log";
 
 const storageKey = "idleTabLedger";
+// A damaged ledger is moved here for support before a fresh one is started.
+export const corruptLedgerStorageKey = "idleTabLedgerCorrupt";
+export const ledgerResetNoticeStorageKey = "idleTabLedgerResetAt";
 const maximumRecords = 1_000;
+// A Keep whose tab has not been seen for this long (closed window, hidden
+// Safari group, earlier session) no longer protects new tabs with its URL.
+export const savedKeepLifetimeMs = 30 * 24 * 60 * 60_000;
 
 export type IdleTabRecord = {
   contextKey: string;
@@ -62,6 +69,19 @@ const hash = async (value: string): Promise<string> => {
   ).join("");
 };
 
+// URL keys are salted hashes; the salt is fixed per ledger, so memoize them.
+const urlKeys = new Map<string, string>();
+const maximumMemoizedUrlKeys = 5_000;
+const urlKeyFor = async (salt: string, url: string): Promise<string> => {
+  const input = `${salt}:${normalizeUrl(url)}`;
+  const memoized = urlKeys.get(input);
+  if (memoized) return memoized;
+  const key = await hash(input);
+  if (urlKeys.size >= maximumMemoizedUrlKeys) urlKeys.clear();
+  urlKeys.set(input, key);
+  return key;
+};
+
 const emptyState = (): IdleTabLedgerState => ({
   records: [],
   salt: createId(),
@@ -94,11 +114,62 @@ const refreshSafetyHolds = (state: IdleTabLedgerState) => {
   return state;
 };
 
+// Every ledger over the same storage area shares one parsed copy and one write
+// queue. Writes from elsewhere (another context, tests) invalidate it.
+type LedgerCache = {
+  generation: number;
+  loading: Promise<IdleTabLedgerState> | null;
+  state: IdleTabLedgerState | null;
+  updates: SequentialTaskQueue;
+  written: string | null;
+};
+const caches = new WeakMap<IBrowserStorageAPI, LedgerCache>();
+
+const cacheFor = (storage: IBrowserStorageAPI): LedgerCache => {
+  const existing = caches.get(storage);
+  if (existing) return existing;
+  const cache: LedgerCache = {
+    generation: 0,
+    loading: null,
+    state: null,
+    updates: new SequentialTaskQueue(),
+    written: null,
+  };
+  storage.onChanged?.addListener((changes) => {
+    const change = changes[storageKey];
+    if (!change) return;
+    if (
+      cache.written !== null &&
+      JSON.stringify(change.newValue) === cache.written
+    )
+      return;
+    cache.generation += 1;
+    cache.loading = null;
+    cache.state = null;
+    cache.written = null;
+  });
+  caches.set(storage, cache);
+  return cache;
+};
+
 export class IdleTabLedger {
-  private readonly updates = new SequentialTaskQueue();
+  private readonly cache: LedgerCache;
   private readonly observedRecords = new Set<string>();
 
-  public constructor(private readonly storage: IBrowserStorageAPI) {}
+  public constructor(private readonly storage: IBrowserStorageAPI) {
+    this.cache = cacheFor(storage);
+  }
+
+  public async hasResetNotice(): Promise<boolean> {
+    const stored = (await this.storage.get(
+      ledgerResetNoticeStorageKey,
+    )) as unknown as Record<string, unknown>;
+    return stored?.[ledgerResetNoticeStorageKey] !== undefined;
+  }
+
+  public async dismissResetNotice(): Promise<void> {
+    await this.storage.remove(ledgerResetNoticeStorageKey);
+  }
 
   public async reconcile(
     tabs: ReadonlyArray<chrome.tabs.Tab>,
@@ -237,7 +308,17 @@ export class IdleTabLedger {
         });
       }
 
-      state.records = trimRecords(state.records);
+      const matchedIds = new Set(
+        [...matchedRecordByTabId.values()].map((record) => record.id),
+      );
+      state.records = trimRecords(
+        state.records.filter(
+          (record) =>
+            !record.kept ||
+            matchedIds.has(record.id) ||
+            now - record.lastSeenAt <= savedKeepLifetimeMs,
+        ),
+      );
       return state;
     });
     return state.records;
@@ -306,14 +387,14 @@ export class IdleTabLedger {
   }
 
   public async getBoundRecord(tabId: TabId): Promise<IdleTabRecord | null> {
-    const state = await this.read();
+    const state = await this.load();
     return state.records.find((record) => record.tabId === tabId) ?? null;
   }
 
   public async getDiagnosticRecords(): Promise<
     ReadonlyArray<IdleTabDiagnosticRecord>
   > {
-    const state = await this.read();
+    const state = await this.load();
     return state.records.map(
       ({ deadline, id, kept, uncertainKeep, revision, tabId }) => ({
         ...(deadline !== undefined ? { deadline } : {}),
@@ -352,7 +433,7 @@ export class IdleTabLedger {
       const current = state.records.find((record) => record.tabId === tabId);
       if (
         !current?.uncertainKeep ||
-        current.urlKey !== (await hash(`${state.salt}:${normalizeUrl(url)}`))
+        current.urlKey !== (await urlKeyFor(state.salt, url))
       )
         return { result: 0, state };
       const before = state.records.length;
@@ -367,12 +448,12 @@ export class IdleTabLedger {
   }
 
   public async isKept(tabId: TabId, url?: string | null): Promise<boolean> {
-    const state = await this.read();
+    const state = await this.load();
     const record = state.records.find((candidate) => candidate.tabId === tabId);
     if (!record?.kept) return false;
     return (
       typeof url !== "string" ||
-      record.urlKey === (await hash(`${state.salt}:${normalizeUrl(url)}`))
+      record.urlKey === (await urlKeyFor(state.salt, url))
     );
   }
 
@@ -382,10 +463,10 @@ export class IdleTabLedger {
   ): Promise<boolean> {
     const record = await this.getBoundRecord(tabId);
     if (!record?.uncertainKeep) return this.isKept(tabId, url);
-    const state = await this.read();
+    const state = await this.load();
     return (
       typeof url !== "string" ||
-      record.urlKey === (await hash(`${state.salt}:${normalizeUrl(url)}`))
+      record.urlKey === (await urlKeyFor(state.salt, url))
     );
   }
 
@@ -458,13 +539,13 @@ export class IdleTabLedger {
     if (typeof tabId !== "number" || typeof tab.url !== "string") {
       return false;
     }
-    const state = await this.read();
+    const state = await this.load();
     const record = state.records.find((candidate) => candidate.id === recordId);
     return (
       record?.tabId === tabId &&
       record.revision === revision &&
       record.deadline !== undefined &&
-      record.urlKey === (await hash(`${state.salt}:${normalizeUrl(tab.url)}`))
+      record.urlKey === (await urlKeyFor(state.salt, tab.url))
     );
   }
 
@@ -473,7 +554,7 @@ export class IdleTabLedger {
     revision: number,
     scheduledTime: number,
   ): Promise<IdleTabRecord | null> {
-    const state = await this.read();
+    const state = await this.load();
     const record = state.records.find((candidate) => candidate.id === recordId);
     if (
       !record ||
@@ -505,9 +586,7 @@ export class IdleTabLedger {
         (left, right) => (left.index ?? 0) - (right.index ?? 0),
       );
       const urlKeys = await Promise.all(
-        orderedTabs.map((tab) =>
-          hash(`${salt}:${normalizeUrl(tab.url as string)}`),
-        ),
+        orderedTabs.map((tab) => urlKeyFor(salt, tab.url as string)),
       );
       const contextKey = await hash(`${salt}:window:${urlKeys.join("|")}`);
       const ordinals = new Map<string, number>();
@@ -529,7 +608,7 @@ export class IdleTabLedger {
     if (typeof tab.url !== "string") {
       throw new Error("Idle tab records require a URL");
     }
-    const urlKey = await hash(`${salt}:${normalizeUrl(tab.url)}`);
+    const urlKey = await urlKeyFor(salt, tab.url);
     return {
       contextKey: await hash(`${salt}:window:${urlKey}`),
       ordinal,
@@ -538,58 +617,73 @@ export class IdleTabLedger {
     };
   }
 
-  private async read(): Promise<IdleTabLedgerState> {
+  // Read-only callers get the shared parsed state and must not mutate it.
+  private async load(): Promise<IdleTabLedgerState> {
+    const cache = this.cache;
+    if (cache.state) return cache.state;
+    if (!cache.loading) {
+      const generation = cache.generation;
+      const loading = this.loadFromStorage().then(
+        (loaded) => {
+          if (cache.loading === loading) cache.loading = null;
+          if (cache.generation === generation) {
+            cache.state = loaded.state;
+            cache.written = loaded.written;
+          }
+          return loaded.state;
+        },
+        (error) => {
+          if (cache.loading === loading) cache.loading = null;
+          throw error;
+        },
+      );
+      cache.loading = loading;
+    }
+    return cache.loading;
+  }
+
+  private async loadFromStorage(): Promise<{
+    state: IdleTabLedgerState;
+    written: string | null;
+  }> {
     const stored = (await this.storage.get(storageKey)) as unknown as Record<
       string,
       unknown
     >;
     const value = stored[storageKey];
-    if (value === undefined) return emptyState();
-    if (
-      !value ||
-      typeof value !== "object" ||
-      !Array.isArray((value as Partial<IdleTabLedgerState>).records) ||
-      typeof (value as Partial<IdleTabLedgerState>).salt !== "string"
-    ) {
-      throw new Error(
-        "Invalid idle ledger; cleanup is blocked to preserve protection",
-      );
+    if (value === undefined) return { state: emptyState(), written: null };
+    try {
+      return { state: parseLedger(value), written: JSON.stringify(value) };
+    } catch (error) {
+      return { state: await this.reset(value, error), written: null };
     }
-    const state = value as IdleTabLedgerState;
-    const ids = new Set<string>();
-    if (
-      state.version !== 1 ||
-      state.records.some((record) => {
-        if (
-          !record ||
-          typeof record.id !== "string" ||
-          ids.has(record.id) ||
-          typeof record.kept !== "boolean" ||
-          typeof record.urlKey !== "string" ||
-          typeof record.contextKey !== "string" ||
-          !Number.isFinite(record.lastSeenAt) ||
-          !Number.isInteger(record.ordinal) ||
-          !Number.isInteger(record.revision) ||
-          (record.deadline !== undefined &&
-            !Number.isFinite(record.deadline)) ||
-          (record.tabId !== undefined && !Number.isInteger(record.tabId)) ||
-          (record.inactiveSince !== undefined &&
-            !Number.isFinite(record.inactiveSince)) ||
-          (record.uncertainKeep !== undefined &&
-            typeof record.uncertainKeep !== "boolean") ||
-          (record.keepSourceIds !== undefined &&
-            (!Array.isArray(record.keepSourceIds) ||
-              record.keepSourceIds.some((id) => typeof id !== "string")))
-        )
-          return true;
-        ids.add(record.id);
-        return false;
-      })
-    )
-      throw new Error(
-        "Invalid idle ledger records; cleanup is blocked to preserve protection",
-      );
-    return refreshSafetyHolds(structuredClone(state));
+  }
+
+  // A damaged ledger must not block cleanup forever. Keep a copy for support,
+  // start fresh, and let the popup tell the user their Keeps were reset.
+  private async reset(
+    value: unknown,
+    error: unknown,
+  ): Promise<IdleTabLedgerState> {
+    logInfo("Resetting damaged idle ledger", error);
+    const state = emptyState();
+    await this.storage.set({
+      [corruptLedgerStorageKey]: value,
+      [ledgerResetNoticeStorageKey]: Date.now(),
+      [storageKey]: state,
+    });
+    return state;
+  }
+
+  // Updaters receive a private copy; the result becomes the shared state and
+  // is only written when it differs from what storage already holds.
+  private async write(state: IdleTabLedgerState): Promise<void> {
+    const serialized = JSON.stringify(state);
+    if (serialized !== this.cache.written) {
+      await this.storage.set({ [storageKey]: state });
+    }
+    this.cache.state = state;
+    this.cache.written = serialized;
   }
 
   private async updateState(
@@ -597,10 +691,10 @@ export class IdleTabLedger {
       state: IdleTabLedgerState,
     ) => Promise<IdleTabLedgerState> | IdleTabLedgerState,
   ): Promise<IdleTabLedgerState> {
-    return await this.updates.addTask(async () => {
-      const current = await this.read();
+    return await this.cache.updates.addTask(async () => {
+      const current = structuredClone(await this.load());
       const state = refreshSafetyHolds(await updater(current));
-      await this.storage.set({ [storageKey]: state });
+      await this.write(state);
       return state;
     });
   }
@@ -613,12 +707,53 @@ export class IdleTabLedger {
           state: IdleTabLedgerState;
         },
   ): Promise<T> {
-    return await this.updates.addTask(async () => {
-      const updated = await updater(await this.read());
-      await this.storage.set({
-        [storageKey]: refreshSafetyHolds(updated.state),
-      });
+    return await this.cache.updates.addTask(async () => {
+      const updated = await updater(structuredClone(await this.load()));
+      await this.write(refreshSafetyHolds(updated.state));
       return updated.result;
     });
   }
+}
+
+function parseLedger(value: unknown): IdleTabLedgerState {
+  if (
+    !value ||
+    typeof value !== "object" ||
+    !Array.isArray((value as Partial<IdleTabLedgerState>).records) ||
+    typeof (value as Partial<IdleTabLedgerState>).salt !== "string"
+  ) {
+    throw new Error("Invalid idle ledger");
+  }
+  const state = value as IdleTabLedgerState;
+  const ids = new Set<string>();
+  if (
+    state.version !== 1 ||
+    state.records.some((record) => {
+      if (
+        !record ||
+        typeof record.id !== "string" ||
+        ids.has(record.id) ||
+        typeof record.kept !== "boolean" ||
+        typeof record.urlKey !== "string" ||
+        typeof record.contextKey !== "string" ||
+        !Number.isFinite(record.lastSeenAt) ||
+        !Number.isInteger(record.ordinal) ||
+        !Number.isInteger(record.revision) ||
+        (record.deadline !== undefined && !Number.isFinite(record.deadline)) ||
+        (record.tabId !== undefined && !Number.isInteger(record.tabId)) ||
+        (record.inactiveSince !== undefined &&
+          !Number.isFinite(record.inactiveSince)) ||
+        (record.uncertainKeep !== undefined &&
+          typeof record.uncertainKeep !== "boolean") ||
+        (record.keepSourceIds !== undefined &&
+          (!Array.isArray(record.keepSourceIds) ||
+            record.keepSourceIds.some((id) => typeof id !== "string")))
+      )
+        return true;
+      ids.add(record.id);
+      return false;
+    })
+  )
+    throw new Error("Invalid idle ledger records");
+  return refreshSafetyHolds(structuredClone(state));
 }

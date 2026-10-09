@@ -54,6 +54,28 @@ export class TabLifecycle {
     this.pendingDuplicateUpdates.set(tabId, { url, activityRevision });
     return true;
   }
+  // In-memory revisions for tabs that are gone only grow on a long-lived
+  // background. Forgetting one can only make pending work for that tab stale,
+  // never let it act, so tabs with in-flight creation/removal are left alone.
+  public forgetTabsExcept(liveTabIds: ReadonlySet<TabId>): void {
+    for (const map of [
+      this.tabActivityRevisions,
+      this.tabCreationRevisions,
+      this.pendingDuplicateUpdates,
+      this.tabScheduleClaims,
+    ]) {
+      for (const tabId of map.keys()) {
+        if (
+          !liveTabIds.has(tabId) &&
+          !this.pendingTabCreations.has(tabId) &&
+          !this.pendingTabRemovalValidations.has(tabId)
+        ) {
+          map.delete(tabId);
+        }
+      }
+    }
+  }
+
   public activitySnapshot() {
     return new Map(this.tabActivityRevisions);
   }

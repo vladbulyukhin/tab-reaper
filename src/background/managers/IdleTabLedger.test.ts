@@ -1,13 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { IBrowserStorageAPI } from "../../api/IBrowserApiProvider";
-import { IdleTabLedger } from "./IdleTabLedger";
+import { IdleTabLedger, savedKeepLifetimeMs } from "./IdleTabLedger";
 
 type StorageDouble = IBrowserStorageAPI & {
   values: Record<string, unknown>;
 };
 
+type ChangeListener = (
+  changes: Record<string, chrome.storage.StorageChange>,
+) => void;
+
+// Like browser storage, values are copied and every write is announced.
 const createStorage = (): StorageDouble => {
   const storage = {} as StorageDouble;
+  const listeners = new Set<ChangeListener>();
   storage.values = {};
   storage.clear = vi.fn(async () => {
     storage.values = {};
@@ -17,7 +23,7 @@ const createStorage = (): StorageDouble => {
     ...storage.values,
   })) as StorageDouble["get"];
   storage.onChanged = {
-    addListener: vi.fn(),
+    addListener: vi.fn((listener: ChangeListener) => listeners.add(listener)),
     hasListener: vi.fn(),
     hasListeners: vi.fn(),
     removeListener: vi.fn(),
@@ -28,7 +34,15 @@ const createStorage = (): StorageDouble => {
     }
   });
   storage.set = vi.fn(async (items: Record<string, unknown>) => {
-    storage.values = { ...storage.values, ...items };
+    const copied = structuredClone(items);
+    storage.values = { ...storage.values, ...copied };
+    const changes = Object.fromEntries(
+      Object.entries(copied).map(([key, newValue]) => [
+        key,
+        { newValue: structuredClone(newValue) },
+      ]),
+    );
+    for (const listener of listeners) listener(changes);
   }) as StorageDouble["set"];
   return storage;
 };
@@ -73,13 +87,52 @@ describe("IdleTabLedger", () => {
     await ledger.reconcile([tab(5, "https://same.example/")]);
     expect(await ledger.isProtected(5)).toBe(false);
   });
-  it("blocks cleanup instead of silently losing malformed persisted protection", async () => {
+  it("resets a malformed ledger, keeps a backup, and leaves a notice", async () => {
     const bad = { version: 1, salt: "existing", records: [{ kept: true }] };
     const store = createStorage();
     store.values.idleTabLedger = bad;
     const ledger = new IdleTabLedger(store);
-    await expect(ledger.reconcile([])).rejects.toThrow("cleanup is blocked");
-    expect(store.values.idleTabLedger).toEqual(bad);
+
+    await ledger.reconcile([tab(1, "https://reset.example/")]);
+
+    expect(store.values.idleTabLedgerCorrupt).toEqual(bad);
+    expect(store.values.idleTabLedger).toMatchObject({
+      version: 1,
+      records: [expect.objectContaining({ tabId: 1, kept: false })],
+    });
+    expect(await ledger.hasResetNotice()).toBe(true);
+    await ledger.dismissResetNotice();
+    expect(await ledger.hasResetNotice()).toBe(false);
+  });
+
+  it("expires saved Keeps that no open tab has matched for 30 days", async () => {
+    const store = createStorage();
+    const ledger = new IdleTabLedger(store);
+    const now = Date.now();
+    const spy = vi.spyOn(Date, "now").mockReturnValue(now);
+    try {
+      await ledger.reconcile([
+        tab(1, "https://open.example/"),
+        tab(2, "https://closed.example/", 1),
+      ]);
+      await ledger.setKept(1, true);
+      await ledger.setKept(2, true);
+      await ledger.detachTab(2);
+
+      spy.mockReturnValue(now + savedKeepLifetimeMs - 1);
+      await ledger.reconcile([tab(1, "https://open.example/")]);
+      await ledger.reconcile([tab(3, "https://closed.example/")]);
+      expect(await ledger.isProtected(3)).toBe(true);
+      await ledger.removeTab(3);
+
+      spy.mockReturnValue(now + 2 * savedKeepLifetimeMs);
+      await ledger.reconcile([tab(1, "https://open.example/")]);
+      await ledger.reconcile([tab(4, "https://closed.example/")]);
+      expect(await ledger.isProtected(4)).toBe(false);
+      expect(await ledger.isKept(1)).toBe(true);
+    } finally {
+      spy.mockRestore();
+    }
   });
 
   it("does not restore an ordinary deadline while a hidden kept tab has the same URL", async () => {
@@ -153,6 +206,7 @@ describe("IdleTabLedger", () => {
       records: Array<{ uncertainKeep?: boolean }>;
     };
     saved.records[0].uncertainKeep = true;
+    await storage.set({ idleTabLedger: saved });
     const restarted = new IdleTabLedger(storage);
     expect(await restarted.isProtected(1)).toBe(false);
     await restarted.reconcile([{ ...original, id: 2 }]);

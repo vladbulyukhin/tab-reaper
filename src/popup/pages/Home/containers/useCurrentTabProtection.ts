@@ -16,6 +16,7 @@ export function useCurrentTabProtection() {
     return {
       excluded: keep.kept,
       uncertainKeep: keep.uncertain,
+      keepsReset: keep.keepsReset,
       siteProtected: site.protected,
       siteSupported: site.supported,
       hostname: site.hostname,
@@ -47,6 +48,11 @@ export function useCurrentTabProtection() {
     );
   }
 
+  async function dismissKeepsReset() {
+    if (!sendMessage) return;
+    await mutate(() => sendMessage("dismissKeepsResetNotice", undefined));
+  }
+
   async function refresh() {
     mutation.clearError();
     return resource.refresh();
@@ -59,5 +65,6 @@ export function useCurrentTabProtection() {
     error: mutation.error ?? resource.error,
     toggleExcluded,
     toggleSiteProtected,
+    dismissKeepsReset,
   };
 }

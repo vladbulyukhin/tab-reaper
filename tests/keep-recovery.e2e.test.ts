@@ -56,3 +56,32 @@ test("requires confirmation before forgetting saved Keeps and reports a failed r
   );
   await expect(page.getByRole("alert")).toHaveCount(0);
 });
+
+test("resets a damaged ledger and lets the user dismiss the notice", async ({
+  page,
+  extensionId,
+}) => {
+  const damaged = { version: 1, salt: "damaged", records: [{ kept: true }] };
+  await page.goto(`chrome-extension://${extensionId}/src/popup/index.html`);
+  await page.evaluate(
+    (value) => chrome.storage.local.set({ idleTabLedger: value }),
+    damaged,
+  );
+  await page.reload();
+
+  const notice = page.getByTestId("keeps-reset-notice");
+  await expect(notice).toContainText("Saved Keeps were reset");
+  expect(
+    await page.evaluate(
+      async () =>
+        (await chrome.storage.local.get("idleTabLedgerCorrupt"))
+          .idleTabLedgerCorrupt,
+    ),
+  ).toEqual(damaged);
+
+  await notice.getByRole("button", { name: "Dismiss" }).click();
+  await expect(notice).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByTestId("current-tab-status")).toBeVisible();
+  await expect(notice).toHaveCount(0);
+});

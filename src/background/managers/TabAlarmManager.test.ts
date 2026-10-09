@@ -46,6 +46,21 @@ describe("TabAlarmManager", () => {
   });
 
   describe("idle scheduling", () => {
+    it("drops per-record queues once their work is done", async () => {
+      await tabAlarmManager.setIdleAlarm("a", 1_000, 1);
+      await tabAlarmManager.clearIdleAlarm("a", 1);
+      await tabAlarmManager.setIdleAlarm("b", 1_000, 1);
+
+      expect(
+        (
+          Reflect.get(tabAlarmManager, "idleMutationQueues") as Map<
+            string,
+            unknown
+          >
+        ).size,
+      ).toBe(0);
+    });
+
     it("sets an alarm at an absolute deadline", async () => {
       const tabId = "11";
       const when = 1_700_000_000_000;

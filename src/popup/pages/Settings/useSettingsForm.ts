@@ -27,6 +27,9 @@ const formSchema = z.object({
   tabRemovalDelayMin: z.coerce.number().positive(),
 });
 
+const debouncedFields = new Set(["tabCountThreshold", "tabRemovalDelayMin"]);
+const saveDelayMs = 600;
+
 type SettingsState = { diagnosticsEnabled: boolean; saveStatus: SaveStatus };
 type SettingsAction =
   | { type: "loaded"; diagnosticsEnabled: boolean }
@@ -113,12 +116,33 @@ export function useSettingsForm() {
     [autosave, loaded],
   );
 
+  // Typed numbers save after a pause (or on blur) so intermediate values such
+  // as "1" and "12" on the way to "120" never reach the background.
+  const pendingSave = useRef<number | null>(null);
+  const flushSave = useCallback(() => {
+    if (pendingSave.current === null) return;
+    window.clearTimeout(pendingSave.current);
+    pendingSave.current = null;
+    void form.handleSubmit(onSubmit)();
+  }, [form.handleSubmit, onSubmit]);
+
   useEffect(() => {
     const subscription = form.watch((_, meta) => {
-      if (meta.type) void form.handleSubmit(onSubmit)();
+      if (!meta.type) return;
+      if (pendingSave.current !== null)
+        window.clearTimeout(pendingSave.current);
+      if (meta.name && debouncedFields.has(meta.name)) {
+        pendingSave.current = window.setTimeout(flushSave, saveDelayMs);
+        return;
+      }
+      pendingSave.current = null;
+      void form.handleSubmit(onSubmit)();
     });
-    return () => subscription.unsubscribe();
-  }, [form.watch, form.handleSubmit, onSubmit]);
+    return () => {
+      subscription.unsubscribe();
+      flushSave();
+    };
+  }, [form.watch, form.handleSubmit, onSubmit, flushSave]);
 
   const loadGroups = useCallback(async () => {
     const tabs = await chromeApiProvider.tab.query({ currentWindow: true });
@@ -139,6 +163,7 @@ export function useSettingsForm() {
     form,
     loaded,
     onSubmit,
+    flushSave,
     retry,
     diagnosticsEnabled: state.diagnosticsEnabled,
     saveStatus: resource.error ? ("error" as const) : state.saveStatus,

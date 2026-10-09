@@ -12,9 +12,11 @@ export const CurrentTabStatus: React.FC = () => {
     error,
     toggleExcluded,
     toggleSiteProtected,
+    dismissKeepsReset,
   } = useCurrentTabProtection();
   const excluded = resource.data?.excluded ?? false;
   const uncertainKeep = resource.data?.uncertainKeep ?? false;
+  const keepsReset = resource.data?.keepsReset ?? false;
   const siteProtected = resource.data?.siteProtected ?? false;
   const siteSupported = resource.data?.siteSupported ?? false;
   const hostname = resource.data?.hostname ?? null;
@@ -60,6 +62,24 @@ export const CurrentTabStatus: React.FC = () => {
               onClick={() => void refresh().catch(() => undefined)}
             >
               Retry
+            </button>
+          </p>
+        ) : null}
+        {keepsReset ? (
+          <p
+            role="status"
+            data-testid="keeps-reset-notice"
+            className="py-3 text-xs text-muted-foreground"
+          >
+            Saved Keeps were reset because their stored data was damaged. Turn
+            on Keep again for tabs you want to protect.{" "}
+            <button
+              type="button"
+              className="underline"
+              disabled={busy}
+              onClick={() => void dismissKeepsReset()}
+            >
+              Dismiss
             </button>
           </p>
         ) : null}

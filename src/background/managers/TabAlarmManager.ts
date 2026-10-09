@@ -18,7 +18,12 @@ export interface ITabAlarmManager {
 }
 
 export class TabAlarmManager implements ITabAlarmManager {
-  private readonly idleMutationQueues = new Map<string, SequentialTaskQueue>();
+  // One queue per record while it has pending work; dropped once idle so a
+  // long-lived background does not keep a queue for every record ever seen.
+  private readonly idleMutationQueues = new Map<
+    string,
+    { queue: SequentialTaskQueue; pending: number }
+  >();
 
   constructor(
     private readonly browserApiProvider: Pick<IBrowserApiProvider, "alarm">,
@@ -38,7 +43,7 @@ export class TabAlarmManager implements ITabAlarmManager {
     when: number,
     revision: number,
   ): Promise<void> {
-    await this.getIdleMutationQueue(recordId).addTask(async () => {
+    await this.runIdleMutation(recordId, async () => {
       const alarmName = TabAlarmManager.getIdleAlarmName(recordId, revision);
       await this.clearIdleAlarmRaw(recordId);
       await this.browserApiProvider.alarm.create(alarmName, { when });
@@ -49,7 +54,7 @@ export class TabAlarmManager implements ITabAlarmManager {
     recordId: string,
     revision?: number,
   ): Promise<void> {
-    await this.getIdleMutationQueue(recordId).addTask(() =>
+    await this.runIdleMutation(recordId, () =>
       this.clearIdleAlarmRaw(recordId, revision),
     );
   }
@@ -81,13 +86,27 @@ export class TabAlarmManager implements ITabAlarmManager {
     );
   }
 
-  private getIdleMutationQueue(recordId: string): SequentialTaskQueue {
-    let queue = this.idleMutationQueues.get(recordId);
-    if (!queue) {
-      queue = new SequentialTaskQueue();
-      this.idleMutationQueues.set(recordId, queue);
+  private async runIdleMutation(
+    recordId: string,
+    task: () => Promise<void>,
+  ): Promise<void> {
+    let entry = this.idleMutationQueues.get(recordId);
+    if (!entry) {
+      entry = { queue: new SequentialTaskQueue(), pending: 0 };
+      this.idleMutationQueues.set(recordId, entry);
     }
-    return queue;
+    entry.pending += 1;
+    try {
+      await entry.queue.addTask(task);
+    } finally {
+      entry.pending -= 1;
+      if (
+        entry.pending === 0 &&
+        this.idleMutationQueues.get(recordId) === entry
+      ) {
+        this.idleMutationQueues.delete(recordId);
+      }
+    }
   }
 
   public onIdleAlarm(

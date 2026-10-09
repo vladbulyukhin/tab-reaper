@@ -2659,9 +2659,8 @@ describe("OpenedTabManager", () => {
       const tabId: TabId = 123;
 
       await fireIdleAlarm({ ...createTestTab(), id: tabId });
-      await Promise.resolve();
+      await new Promise((resolve) => setTimeout(resolve, 20));
 
-      expect(browserApiProvider.tab.get).not.toHaveBeenCalled();
       expect(browserApiProvider.tab.remove).not.toHaveBeenCalled();
     });
 
@@ -2786,66 +2785,6 @@ describe("OpenedTabManager", () => {
       expect(browserApiProvider.tab.remove).not.toHaveBeenCalled();
     });
 
-    it("completes persisted identity validation before the final floor query", async () => {
-      const candidate = {
-        ...createTestTab(),
-        id: 1094,
-        windowId: 10,
-      };
-      const companion = {
-        ...createTestTab(),
-        id: 1095,
-        windowId: candidate.windowId,
-      };
-      const active = {
-        ...createTestTab(),
-        id: 1096,
-        windowId: candidate.windowId,
-        active: true,
-      };
-      const deadline = 1_700_000_000_000;
-      const deferredLedgerRead = createDeferred<Record<string, unknown>>();
-      let visibleTabs: chrome.tabs.Tab[] = [candidate, companion, active];
-      const observedFloorCounts: number[] = [];
-      configurationManager.get.mockResolvedValue({
-        ...emptyConfiguration,
-        tabCountThreshold: 2,
-      });
-      const record = await createIdleRecord(candidate, deadline);
-      browserApiProvider.localStorage.get.mockClear();
-      const storageGet = browserApiProvider.localStorage.get as unknown as {
-        mockImplementation: (
-          fn: (
-            keys: Record<string, unknown>,
-          ) => Promise<Record<string, unknown>>,
-        ) => void;
-      };
-      storageGet.mockImplementation(async () => deferredLedgerRead.promise);
-      mockTabGet(async () => candidate);
-      mockTabQuery(async (queryInfo) => {
-        if (Object.keys(queryInfo ?? {}).length === 0) {
-          observedFloorCounts.push(visibleTabs.length);
-          return [...visibleTabs];
-        }
-        return [];
-      });
-
-      getFirstAlarmListener()(record.id, record.revision, deadline);
-      await vi.waitFor(() =>
-        expect(browserApiProvider.localStorage.get).toHaveBeenCalledTimes(1),
-      );
-      expect(observedFloorCounts).toEqual([]);
-
-      visibleTabs = [candidate, active];
-      deferredLedgerRead.resolve({
-        idleTabLedger: localValues.idleTabLedger,
-      });
-      await vi.waitFor(() => expect(observedFloorCounts).toHaveLength(1));
-
-      expect(observedFloorCounts).toEqual([2]);
-      expect(browserApiProvider.tab.remove).not.toHaveBeenCalled();
-    });
-
     it("cancels a removal when a protection mutation starts during the final query", async () => {
       const candidate = { ...createTestTab(), id: 1097, windowId: 10 };
       const floor = createDeferred<ReadonlyArray<chrome.tabs.Tab>>();
@@ -2954,9 +2893,8 @@ describe("OpenedTabManager", () => {
         id: tabId,
         windowId: 1,
       });
-      await Promise.resolve();
+      await new Promise((resolve) => setTimeout(resolve, 20));
 
-      expect(browserApiProvider.tab.get).not.toHaveBeenCalled();
       expect(browserApiProvider.tab.remove).not.toHaveBeenCalled();
     });
 

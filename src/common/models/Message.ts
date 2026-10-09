@@ -10,6 +10,7 @@ export type MessagePayloads = {
   getCurrentTabKeepState: undefined;
   setCurrentTabExcluded: { excluded: boolean };
   forgetCurrentTabSavedKeeps: undefined;
+  dismissKeepsResetNotice: undefined;
   getProtectedSites: undefined;
   addProtectedSite: { hostname: string };
   removeProtectedSite: { hostname: string };
@@ -34,9 +35,11 @@ export type MessageResponses = {
     status: "ok" | "error";
     kept: boolean;
     uncertain: boolean;
+    keepsReset: boolean;
   };
   setCurrentTabExcluded: { status: string };
   forgetCurrentTabSavedKeeps: { status: "ok" | "error"; cleared: number };
+  dismissKeepsResetNotice: { status: "ok" | "error" };
   getProtectedSites: { sites: ReadonlyArray<string> };
   addProtectedSite: { status: string };
   removeProtectedSite: { status: string };

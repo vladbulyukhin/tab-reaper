@@ -29,6 +29,11 @@ import { TabAlarmManager } from "../managers/TabAlarmManager";
 import { toKeepDiagnosticsTab } from "../utils/DiagnosticTabs";
 import { debugBroadcast, logInfo } from "../utils/log";
 
+type RescheduleOptions = Parameters<
+  IOpenedTabManager["rescheduleOpenTabs"]
+>[0] &
+  object;
+
 export interface IBackgroundService {
   start(): void;
 }
@@ -40,6 +45,7 @@ export class BackgroundService implements IBackgroundService {
   private readonly excludedTabManager: IExcludedTabManager;
   private readonly protectedSiteManager: ProtectedSiteManager;
   private readonly snoozeManager: SnoozeManager;
+  private readonly idleTabLedger: IdleTabLedger;
 
   constructor(private readonly browserApiProvider: IBrowserApiProvider) {
     logInfo("BackgroundService init");
@@ -51,6 +57,7 @@ export class BackgroundService implements IBackgroundService {
     );
     debugBroadcast("extension-action-manager-init");
     const idleTabLedger = new IdleTabLedger(browserApiProvider.localStorage);
+    this.idleTabLedger = idleTabLedger;
 
     this.excludedTabManager = new ExcludedTabManager(
       browserApiProvider,
@@ -141,19 +148,20 @@ export class BackgroundService implements IBackgroundService {
             nextConfiguration.diagnosticsEnabled,
           );
           await this.openedTabManager.syncRecentlyClosedPersistence();
-          await this.openedTabManager.rescheduleOpenTabs({
+          sendResponse({ status: "ok" });
+          return {
             recalculateIdleDeadlines:
               typeof payload.tabRemovalDelayMin === "number" &&
               payload.tabRemovalDelayMin !==
                 previousConfiguration.tabRemovalDelayMin,
-          });
-          sendResponse({ status: "ok" });
+          };
         } catch (error) {
           logInfo("setConfig failed", error);
           debugBroadcast("message-handler:setConfig:error", {
             message: (error as Error)?.message ?? String(error),
           });
           sendResponse({ status: "error" });
+          return {};
         }
       },
     );
@@ -170,9 +178,29 @@ export class BackgroundService implements IBackgroundService {
             typeof tab?.id === "number"
               ? await this.excludedTabManager.getKeepState(tab.id, tab.url)
               : { kept: false, uncertain: false };
-          respond({ status: "ok", ...state });
+          const keepsReset = await this.idleTabLedger
+            .hasResetNotice()
+            .catch(() => false);
+          respond({ status: "ok", ...state, keepsReset });
         } catch {
-          respond({ status: "error", kept: false, uncertain: false });
+          respond({
+            status: "error",
+            kept: false,
+            uncertain: false,
+            keepsReset: false,
+          });
+        }
+      },
+    );
+
+    this.messageService.onMessage(
+      "dismissKeepsResetNotice",
+      async (_payload, _sender, respond) => {
+        try {
+          await this.idleTabLedger.dismissResetNotice();
+          respond({ status: "ok" });
+        } catch {
+          respond({ status: "error" });
         }
       },
     );
@@ -328,7 +356,6 @@ export class BackgroundService implements IBackgroundService {
             visibleTabs,
             active.url,
           );
-          await this.openedTabManager.rescheduleOpenTabs();
           sendResponse({ status: "ok", cleared });
         } catch (error) {
           logInfo("forgetCurrentTabSavedKeeps failed", error);
@@ -359,7 +386,6 @@ export class BackgroundService implements IBackgroundService {
         debugBroadcast("message-handler:addProtectedSite");
         try {
           await this.protectedSiteManager.add(payload.hostname);
-          await this.openedTabManager.rescheduleOpenTabs();
           sendResponse({ status: "ok" });
         } catch (error) {
           logInfo("addProtectedSite failed", error);
@@ -377,7 +403,6 @@ export class BackgroundService implements IBackgroundService {
         debugBroadcast("message-handler:removeProtectedSite");
         try {
           await this.protectedSiteManager.remove(payload.hostname);
-          await this.openedTabManager.rescheduleOpenTabs();
           sendResponse({ status: "ok" });
         } catch (error) {
           logInfo("removeProtectedSite failed", error);
@@ -467,8 +492,6 @@ export class BackgroundService implements IBackgroundService {
           } else {
             await this.protectedSiteManager.remove(hostname);
           }
-
-          await this.openedTabManager.rescheduleOpenTabs();
 
           const supportedHostname = hostname;
           const protectedNow = (await this.protectedSiteManager.list()).some(
@@ -607,8 +630,6 @@ export class BackgroundService implements IBackgroundService {
           const status = await this.snoozeManager.setSnooze(payload.minutes);
           if (status.snoozed) {
             await this.openedTabManager.clearScheduledRemovals();
-          } else {
-            await this.openedTabManager.rescheduleOpenTabs();
           }
           sendResponse({
             status: "ok",
@@ -631,7 +652,6 @@ export class BackgroundService implements IBackgroundService {
         debugBroadcast("message-handler:clearSnooze");
         try {
           await this.snoozeManager.clearSnooze();
-          await this.openedTabManager.rescheduleOpenTabs();
           sendResponse({ status: "ok", snoozed: false, until: null });
         } catch (error) {
           logInfo("clearSnooze failed", error);
@@ -652,16 +672,18 @@ export class BackgroundService implements IBackgroundService {
       payload: MessagePayloads[K],
       sender: chrome.runtime.MessageSender,
       respond: (response: MessageResponses[K]) => void,
-    ) => Promise<void>,
+    ) => Promise<RescheduleOptions> | Promise<void>,
   ): void {
+    // Every policy change ends with exactly one reconcile of open tabs.
     this.messageService.onMessage(type, async (payload, sender, respond) => {
       const finish = this.openedTabManager.beginSafetyMutation();
+      let options: RescheduleOptions = {};
       try {
-        await handler(payload, sender, respond);
+        options = (await handler(payload, sender, respond)) ?? {};
       } finally {
         finish();
         await this.openedTabManager
-          .rescheduleOpenTabs()
+          .rescheduleOpenTabs(options)
           .catch((error) =>
             logInfo("Failed to reconcile cleanup after a policy change", error),
           );

@@ -61,4 +61,18 @@ describe("TabLifecycle ownership", () => {
     resolve?.({ tabGenerations: JSON.stringify({ 1: 1 }) });
     expect(await ownership).toBe(false);
   });
+
+  it("forgets revisions of closed tabs without touching in-flight creations", () => {
+    const lifecycle = createLifecycle();
+    lifecycle.advanceTabActivityRevision(1);
+    const closed = lifecycle.advanceTabActivityRevision(2);
+    const creating = lifecycle.beginTabCreation(3);
+
+    lifecycle.forgetTabsExcept(new Set([1]));
+
+    expect(lifecycle.getTabActivityRevision(1)).toBe(1);
+    expect(lifecycle.getTabActivityRevision(2)).toBe(0);
+    expect(lifecycle.isLifecycleOwner(2, closed)).toBe(false);
+    expect(lifecycle.isPendingCreationOwner(3, creating)).toBe(true);
+  });
 });

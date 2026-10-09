@@ -303,6 +303,15 @@ export class OpenedTabManager implements IOpenedTabManager {
     const tabs = allTabs.filter(
       (tab) => this.isVisibleTab(tab) && tab.active !== true,
     );
+    if (allTabs.length > 0) {
+      this.lifecycle.forgetTabsExcept(
+        new Set(
+          allTabs
+            .map((tab) => tab.id)
+            .filter((id): id is TabId => typeof id === "number"),
+        ),
+      );
+    }
     await this.idleTabLedger.reconcile(allTabs);
     await this.excludedTabManager.reconcileOpenTabs(allTabs);
     await this.previousActiveTabByWindow.update((previous) => ({
