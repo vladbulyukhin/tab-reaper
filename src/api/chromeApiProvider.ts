@@ -217,7 +217,6 @@ export function createBrowserApiProvider(
   };
 
   const runtimeApi: IBrowserRuntimeAPI = {
-    getLastError: () => api.runtime?.lastError,
     onInstalled: eventOrUndefined(api.runtime?.onInstalled),
     onMessage: eventOrUndefined(api.runtime?.onMessage),
     onStartup: eventOrUndefined(api.runtime?.onStartup),

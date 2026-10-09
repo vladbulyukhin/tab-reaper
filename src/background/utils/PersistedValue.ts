@@ -1,6 +1,6 @@
 import type { IBrowserStorageAPI } from "../../api/IBrowserApiProvider";
+import { logInfo } from "../../common/utils/log";
 import { SequentialTaskQueue } from "./SequentialTaskQueue";
-import { logInfo } from "./log";
 
 export interface PersistedValueReadResult<T> {
   // Missing and malformed data both expose a default, but callers such as the

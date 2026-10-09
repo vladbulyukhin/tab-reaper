@@ -1,7 +1,7 @@
 import type { IBrowserStorageAPI } from "../../api/IBrowserApiProvider";
+import { logInfo } from "../../common/utils/log";
 import type { TabId } from "../../types";
 import { SequentialTaskQueue } from "../utils/SequentialTaskQueue";
-import { logInfo } from "../utils/log";
 
 const storageKey = "idleTabLedger";
 // A damaged ledger is moved here for support before a fresh one is started.

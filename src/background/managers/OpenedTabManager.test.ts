@@ -2387,7 +2387,6 @@ describe("OpenedTabManager", () => {
         return tab;
       });
 
-      browserApiProvider.runtime.getLastError.mockReturnValue(undefined);
       excludedTabManager.isExcluded.mockReturnValue(Promise.resolve(false));
 
       const listener = getFirstListener<
@@ -2461,7 +2460,6 @@ describe("OpenedTabManager", () => {
       mockTabRemove(async (tabId) => {
         openTabs = openTabs.filter((tab) => tab.id !== tabId);
       });
-      browserApiProvider.runtime.getLastError.mockReturnValue(undefined);
 
       const listener = getFirstListener<
         (
@@ -2510,7 +2508,6 @@ describe("OpenedTabManager", () => {
       );
       browserApiProvider.tab.get.mockReturnValueOnce(Promise.resolve(copyTab));
 
-      browserApiProvider.runtime.getLastError.mockReturnValue(undefined);
       excludedTabManager.isExcluded.mockReturnValue(Promise.resolve(false));
       protectedSiteManager.isProtectedUrl.mockReturnValue(
         Promise.resolve(true),

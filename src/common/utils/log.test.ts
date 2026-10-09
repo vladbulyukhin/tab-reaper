@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { debugLog, initDebug } from "./debug";
+import { logInfo } from "./log";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -7,14 +7,13 @@ afterEach(() => {
 });
 
 it("does not require an injected debug constant when called directly", () => {
-  expect(() => initDebug()).not.toThrow();
-  expect(() => debugLog("No injected debug constant")).not.toThrow();
+  expect(() => logInfo("No injected debug constant")).not.toThrow();
 });
 
-it("keeps an unavailable development console from breaking message handling", () => {
+it("keeps an unavailable development console from breaking callers", () => {
   vi.stubGlobal("__DEBUG__", true);
   vi.spyOn(console, "info").mockImplementation(() => {
     throw new Error("Console unavailable");
   });
-  expect(() => debugLog("Message received")).not.toThrow();
+  expect(() => logInfo("Message received")).not.toThrow();
 });

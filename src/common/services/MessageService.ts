@@ -6,7 +6,6 @@ import type {
   MessageTypes,
   RuntimeMessage,
 } from "../models/Message";
-import { debugLog } from "../utils/debug";
 
 export type CleanUp = () => void;
 
@@ -74,8 +73,6 @@ export class MessageService implements IMessageService {
       return () => this.removeRuntimeListener();
     }
 
-    if (typeof __DEBUG__ !== "undefined" && __DEBUG__)
-      debugLog("[tab-reaper][message] listener attached");
     this.runtimeListener = (
       message: Message | RuntimeMessage,
       sender: chrome.runtime.MessageSender,
@@ -86,11 +83,7 @@ export class MessageService implements IMessageService {
       if (!messageType || typeof messageType !== "string") {
         return false;
       }
-      if (typeof __DEBUG__ !== "undefined" && __DEBUG__)
-        debugLog("[tab-reaper][message][recv]", messageType, message);
       const callback = this.listeners.get(messageType as MessageTypes);
-      if (typeof __DEBUG__ !== "undefined" && __DEBUG__ && !callback)
-        debugLog("[tab-reaper][message][recv] no listeners for", messageType);
 
       if (!callback) {
         return false;
@@ -176,32 +169,12 @@ export class MessageService implements IMessageService {
     type: K,
     payload: MessagePayloads[K],
   ): Promise<MessageResponses[K]> {
-    if (typeof __DEBUG__ !== "undefined" && __DEBUG__)
-      debugLog("[tab-reaper][message][send]", type, payload);
-    let response: MessageResponses[K];
-    try {
-      response = await this.browserApiProvider.runtime.sendMessage({
-        type,
-        payload,
-      });
-    } catch (error) {
-      if (typeof __DEBUG__ !== "undefined" && __DEBUG__)
-        debugLog("[tab-reaper][message][error]", type, error);
-      throw error;
-    }
-    if (typeof __DEBUG__ !== "undefined" && __DEBUG__)
-      debugLog("[tab-reaper][message][resp]", type, response);
+    const response: MessageResponses[K] =
+      await this.browserApiProvider.runtime.sendMessage({ type, payload });
     if (isTransportError(response)) {
       throw new Error(response.message);
     }
     return response;
-  }
-
-  public async sendMessageToBackground<K extends MessageTypes>(
-    type: K,
-    payload: MessagePayloads[K],
-  ): Promise<MessageResponses[K]> {
-    return this.sendMessage(type, payload);
   }
 
   private removeRuntimeListener(): void {

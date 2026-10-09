@@ -1,10 +1,9 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { chromeApiProvider } from "../../api/chromeApiProvider";
 import {
   type IMessageService,
   MessageService,
 } from "../../common/services/MessageService";
-import { listenForDebugBroadcasts } from "../../common/utils/debug/PopupDiagnostics";
 
 interface IBackgroundCommunicationValue {
   readonly sendMessage: IMessageService["sendMessage"] | null;
@@ -23,8 +22,6 @@ export const BackgroundCommunicationProvider: React.FC<
   const [messageService] = useState(
     () => new MessageService(chromeApiProvider),
   );
-
-  useEffect(listenForDebugBroadcasts, []);
 
   const value = useMemo(
     () => ({ sendMessage: messageService.sendMessage }),

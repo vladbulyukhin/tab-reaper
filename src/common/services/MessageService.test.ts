@@ -16,7 +16,6 @@ class RuntimeHarness {
   public removeCalls = 0;
 
   public readonly runtime: Pick<IBrowserApiProvider, "runtime">["runtime"] = {
-    getLastError: () => undefined,
     onInstalled: {} as chrome.runtime.RuntimeInstalledEvent,
     onMessage: {
       addListener: (listener) => {
@@ -121,49 +120,52 @@ describe("MessageService", () => {
 
   it("claims a registered synchronous handler and responds once", () => {
     const [service, runtime] = createService();
-    service.onMessage("isCurrentTabExcluded", (_payload, _sender, respond) => {
-      respond(true);
-    });
+    service.onMessage(
+      "clearCleanupDiagnostics",
+      (_payload, _sender, respond) => {
+        respond({ status: "ok" });
+      },
+    );
     service.listen();
 
     const result = runtime.deliver({
-      type: "isCurrentTabExcluded",
+      type: "clearCleanupDiagnostics",
       payload: undefined,
     });
 
     expect(result.claimed).toBe(true);
-    expect(result.responses).toEqual([true]);
+    expect(result.responses).toEqual([{ status: "ok" }]);
   });
 
   it("claims a registered asynchronous handler and responds", async () => {
     const [service, runtime] = createService();
     service.onMessage(
-      "isCurrentTabExcluded",
+      "clearCleanupDiagnostics",
       async (_payload, _sender, respond) => {
         await Promise.resolve();
-        respond(false);
+        respond({ status: "error" });
       },
     );
     service.listen();
 
     const result = await runtime.deliverAsync({
-      type: "isCurrentTabExcluded",
+      type: "clearCleanupDiagnostics",
       payload: undefined,
     });
 
     expect(result.claimed).toBe(true);
-    expect(result.responses).toEqual([false]);
+    expect(result.responses).toEqual([{ status: "error" }]);
   });
 
   it("returns a transport error when a synchronous handler throws", () => {
     const [service, runtime] = createService();
-    service.onMessage("isCurrentTabExcluded", () => {
+    service.onMessage("clearCleanupDiagnostics", () => {
       throw new Error("sync handler failed");
     });
     service.listen();
 
     const result = runtime.deliver({
-      type: "isCurrentTabExcluded",
+      type: "clearCleanupDiagnostics",
       payload: undefined,
     });
 
@@ -178,14 +180,17 @@ describe("MessageService", () => {
 
   it("returns a transport error when a synchronous handler responds then throws", () => {
     const [service, runtime] = createService();
-    service.onMessage("isCurrentTabExcluded", (_payload, _sender, respond) => {
-      respond(true);
-      throw new Error("sync handler failed after responding");
-    });
+    service.onMessage(
+      "clearCleanupDiagnostics",
+      (_payload, _sender, respond) => {
+        respond({ status: "ok" });
+        throw new Error("sync handler failed after responding");
+      },
+    );
     service.listen();
 
     const result = runtime.deliver({
-      type: "isCurrentTabExcluded",
+      type: "clearCleanupDiagnostics",
       payload: undefined,
     });
 
@@ -200,13 +205,13 @@ describe("MessageService", () => {
 
   it("returns a transport error when an asynchronous handler rejects", async () => {
     const [service, runtime] = createService();
-    service.onMessage("isCurrentTabExcluded", async () => {
+    service.onMessage("clearCleanupDiagnostics", async () => {
       throw new Error("async handler failed");
     });
     service.listen();
 
     const result = await runtime.deliverAsync({
-      type: "isCurrentTabExcluded",
+      type: "clearCleanupDiagnostics",
       payload: undefined,
     });
 
@@ -222,16 +227,16 @@ describe("MessageService", () => {
   it("returns a transport error when an asynchronous handler responds then rejects", async () => {
     const [service, runtime] = createService();
     service.onMessage(
-      "isCurrentTabExcluded",
+      "clearCleanupDiagnostics",
       async (_payload, _sender, respond) => {
-        respond(false);
+        respond({ status: "error" });
         throw new Error("async handler failed after responding");
       },
     );
     service.listen();
 
     const result = await runtime.deliverAsync({
-      type: "isCurrentTabExcluded",
+      type: "clearCleanupDiagnostics",
       payload: undefined,
     });
 
@@ -246,7 +251,7 @@ describe("MessageService", () => {
 
   it("uses a fallback transport-error message when rejection conversion throws", async () => {
     const [service, runtime] = createService();
-    service.onMessage("isCurrentTabExcluded", async () => {
+    service.onMessage("clearCleanupDiagnostics", async () => {
       throw {
         toString: () => {
           throw new Error("cannot convert rejection reason");
@@ -256,7 +261,7 @@ describe("MessageService", () => {
     service.listen();
 
     const result = await runtime.deliverAsync({
-      type: "isCurrentTabExcluded",
+      type: "clearCleanupDiagnostics",
       payload: undefined,
     });
 
@@ -294,37 +299,40 @@ describe("MessageService", () => {
     });
 
     await expect(
-      service.sendMessage("isCurrentTabExcluded", undefined),
+      service.sendMessage("clearCleanupDiagnostics", undefined),
     ).rejects.toThrow("background handler failed");
   });
 
   it("rejects duplicate live handlers for a message type", () => {
     const [service] = createService();
-    service.onMessage("isCurrentTabExcluded", () => undefined);
+    service.onMessage("clearCleanupDiagnostics", () => undefined);
 
     expect(() =>
-      service.onMessage("isCurrentTabExcluded", () => undefined),
-    ).toThrow("A handler is already registered for isCurrentTabExcluded");
+      service.onMessage("clearCleanupDiagnostics", () => undefined),
+    ).toThrow("A handler is already registered for clearCleanupDiagnostics");
   });
 
   it("allows a type to be registered again after its handler is cleaned up", () => {
     const [service, runtime] = createService();
     const cleanupFirst = service.onMessage(
-      "isCurrentTabExcluded",
+      "clearCleanupDiagnostics",
       () => undefined,
     );
     cleanupFirst();
-    service.onMessage("isCurrentTabExcluded", (_payload, _sender, respond) => {
-      respond(true);
-    });
+    service.onMessage(
+      "clearCleanupDiagnostics",
+      (_payload, _sender, respond) => {
+        respond({ status: "ok" });
+      },
+    );
     cleanupFirst();
     service.listen();
 
     const result = runtime.deliver({
-      type: "isCurrentTabExcluded",
+      type: "clearCleanupDiagnostics",
       payload: undefined,
     });
 
-    expect(result.responses).toEqual([true]);
+    expect(result.responses).toEqual([{ status: "ok" }]);
   });
 });

@@ -5,13 +5,13 @@ import {
   emptyConfiguration,
 } from "../../common/models/Configuration";
 import type { RemovedTab, TabCloseReason } from "../../common/models/Tab";
+import { logInfo } from "../../common/utils/log";
 import type { TabId, WindowId } from "../../types";
 import { collectCleanupDiagnostics } from "../utils/CleanupDiagnosticsCollector";
 import { CleanupDiagnosticsJournal } from "../utils/CleanupDiagnosticsJournal";
 import { toCleanupDiagnosticsTab } from "../utils/DiagnosticTabs";
 import { PersistedValue } from "../utils/PersistedValue";
 import { SequentialTaskQueue } from "../utils/SequentialTaskQueue";
-import { logInfo } from "../utils/log";
 import type { IConfigurationManager } from "./ConfigurationManager";
 import type { IExcludedTabManager } from "./ExcludedTabManager";
 import type { IExtensionActionManager } from "./ExtensionActionManager";
@@ -1154,16 +1154,6 @@ export class OpenedTabManager implements IOpenedTabManager {
     configuration: IConfiguration,
   ): Promise<boolean> {
     if (!tab || typeof tab.id !== "number") return false;
-
-    // TODO: this is not the right approach, needs to be replaced with try/catch
-    const lastError = this.browserApiProvider.runtime.getLastError();
-    if (lastError) {
-      logInfo(
-        "OpenedTabManager: tab cannot be removed because of the error: ",
-        lastError,
-      );
-      return false;
-    }
 
     if (tab.active) {
       return false;

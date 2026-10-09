@@ -9,6 +9,7 @@ import {
   type IMessageService,
   MessageService,
 } from "../../common/services/MessageService";
+import { logInfo } from "../../common/utils/log";
 import {
   ConfigurationManager,
   type IConfigurationManager,
@@ -27,7 +28,6 @@ import { ProtectedSiteManager } from "../managers/ProtectedSiteManager";
 import { SnoozeManager } from "../managers/SnoozeManager";
 import { TabAlarmManager } from "../managers/TabAlarmManager";
 import { toKeepDiagnosticsTab } from "../utils/DiagnosticTabs";
-import { debugBroadcast, logInfo } from "../utils/log";
 
 type RescheduleOptions = Parameters<
   IOpenedTabManager["rescheduleOpenTabs"]
@@ -49,13 +49,10 @@ export class BackgroundService implements IBackgroundService {
 
   constructor(private readonly browserApiProvider: IBrowserApiProvider) {
     logInfo("BackgroundService init");
-    debugBroadcast("background-service-init");
     const tabAlarmManager = new TabAlarmManager(browserApiProvider);
-    debugBroadcast("tab-alarm-manager-init");
     const extensionActionManager = new ExtensionActionManager(
       browserApiProvider,
     );
-    debugBroadcast("extension-action-manager-init");
     const idleTabLedger = new IdleTabLedger(browserApiProvider.localStorage);
     this.idleTabLedger = idleTabLedger;
 
@@ -64,13 +61,9 @@ export class BackgroundService implements IBackgroundService {
       extensionActionManager,
       idleTabLedger,
     );
-    debugBroadcast("excluded-tab-manager-init");
     this.protectedSiteManager = new ProtectedSiteManager(browserApiProvider);
-    debugBroadcast("protected-site-manager-init");
     this.snoozeManager = new SnoozeManager(browserApiProvider);
-    debugBroadcast("snooze-manager-init");
     this.configurationManager = new ConfigurationManager(browserApiProvider);
-    debugBroadcast("configuration-manager-init");
     this.openedTabManager = new OpenedTabManager(
       browserApiProvider,
       tabAlarmManager,
@@ -81,17 +74,13 @@ export class BackgroundService implements IBackgroundService {
       extensionActionManager,
       idleTabLedger,
     );
-    debugBroadcast("opened-tab-manager-init");
     this.messageService = new MessageService(browserApiProvider);
-    debugBroadcast("message-service-init");
   }
 
   public start(): void {
     this.registerMessageHandlers();
     logInfo("BackgroundService start");
-    debugBroadcast("background-service-start");
     this.snoozeManager.onEnded(() => {
-      debugBroadcast("snooze-ended");
       void this.openedTabManager.rescheduleOpenTabs().catch((error) => {
         logInfo("Failed to reschedule tabs after snooze ended", error);
       });
@@ -118,19 +107,14 @@ export class BackgroundService implements IBackgroundService {
 
   registerMessageHandlers() {
     logInfo("Registering message handlers");
-    debugBroadcast("register-message-handlers");
     this.messageService.onMessage(
       "getConfig",
       async (_payload, _sender, sendResponse) => {
-        debugBroadcast("message-handler:getConfig");
         try {
           const configuration = await this.configurationManager.get();
           sendResponse(configuration);
         } catch (error) {
           logInfo("getConfig failed", error);
-          debugBroadcast("message-handler:getConfig:error", {
-            message: (error as Error)?.message ?? String(error),
-          });
           sendResponse(emptyConfiguration);
         }
       },
@@ -139,7 +123,6 @@ export class BackgroundService implements IBackgroundService {
     this.registerSafetyHandler(
       "setConfig",
       async (payload, _sender, sendResponse) => {
-        debugBroadcast("message-handler:setConfig");
         try {
           const previousConfiguration = await this.configurationManager.get();
           await this.configurationManager.save(payload);
@@ -157,9 +140,6 @@ export class BackgroundService implements IBackgroundService {
           };
         } catch (error) {
           logInfo("setConfig failed", error);
-          debugBroadcast("message-handler:setConfig:error", {
-            message: (error as Error)?.message ?? String(error),
-          });
           sendResponse({ status: "error" });
           return {};
         }
@@ -205,51 +185,9 @@ export class BackgroundService implements IBackgroundService {
       },
     );
 
-    this.messageService.onMessage(
-      "isCurrentTabExcluded",
-      async (_payload, _sender, sendResponse) => {
-        debugBroadcast("message-handler:isCurrentTabExcluded");
-        try {
-          const [currentTab] = await this.browserApiProvider.tab.query({
-            active: true,
-            currentWindow: true,
-          });
-
-          if (typeof currentTab?.id === "number") {
-            const isExcluded = await this.excludedTabManager.isExcluded(
-              currentTab.id,
-              currentTab.url,
-            );
-            this.openedTabManager.recordKeepStateDiagnostic("keep-state-read", {
-              excluded: isExcluded,
-              tab: toKeepDiagnosticsTab(currentTab),
-            });
-            sendResponse(isExcluded);
-          } else {
-            this.openedTabManager.recordKeepStateDiagnostic("keep-state-read", {
-              excluded: false,
-              tab: null,
-            });
-            sendResponse(false);
-          }
-        } catch (error) {
-          logInfo("isCurrentTabExcluded failed", error);
-          debugBroadcast("message-handler:isCurrentTabExcluded:error", {
-            message: (error as Error)?.message ?? String(error),
-          });
-          this.openedTabManager.recordKeepStateDiagnostic(
-            "keep-state-read-failed",
-            { message: (error as Error)?.message ?? String(error) },
-          );
-          sendResponse(false);
-        }
-      },
-    );
-
     this.registerSafetyHandler(
       "setCurrentTabExcluded",
       async (payload, _sender, sendResponse) => {
-        debugBroadcast("message-handler:setCurrentTabExcluded");
         try {
           const [currentTab] = await this.browserApiProvider.tab.query({
             active: true,
@@ -298,9 +236,6 @@ export class BackgroundService implements IBackgroundService {
               sendResponse({ status: "ok" });
             } catch (error) {
               logInfo("setCurrentTabExcluded failed", error);
-              debugBroadcast("message-handler:setCurrentTabExcluded:error", {
-                message: (error as Error)?.message ?? String(error),
-              });
               this.openedTabManager.recordKeepStateDiagnostic(
                 "keep-state-write-failed",
                 {
@@ -324,9 +259,6 @@ export class BackgroundService implements IBackgroundService {
           }
         } catch (error) {
           logInfo("setCurrentTabExcluded failed", error);
-          debugBroadcast("message-handler:setCurrentTabExcluded:error", {
-            message: (error as Error)?.message ?? String(error),
-          });
           this.openedTabManager.recordKeepStateDiagnostic(
             "keep-state-write-failed",
             {
@@ -367,14 +299,10 @@ export class BackgroundService implements IBackgroundService {
     this.messageService.onMessage(
       "getProtectedSites",
       async (_payload, _sender, sendResponse) => {
-        debugBroadcast("message-handler:getProtectedSites");
         try {
           sendResponse({ sites: await this.protectedSiteManager.list() });
         } catch (error) {
           logInfo("getProtectedSites failed", error);
-          debugBroadcast("message-handler:getProtectedSites:error", {
-            message: (error as Error)?.message ?? String(error),
-          });
           sendResponse({ sites: [] });
         }
       },
@@ -383,15 +311,11 @@ export class BackgroundService implements IBackgroundService {
     this.registerSafetyHandler(
       "addProtectedSite",
       async (payload, _sender, sendResponse) => {
-        debugBroadcast("message-handler:addProtectedSite");
         try {
           await this.protectedSiteManager.add(payload.hostname);
           sendResponse({ status: "ok" });
         } catch (error) {
           logInfo("addProtectedSite failed", error);
-          debugBroadcast("message-handler:addProtectedSite:error", {
-            message: (error as Error)?.message ?? String(error),
-          });
           sendResponse({ status: "error" });
         }
       },
@@ -400,15 +324,11 @@ export class BackgroundService implements IBackgroundService {
     this.registerSafetyHandler(
       "removeProtectedSite",
       async (payload, _sender, sendResponse) => {
-        debugBroadcast("message-handler:removeProtectedSite");
         try {
           await this.protectedSiteManager.remove(payload.hostname);
           sendResponse({ status: "ok" });
         } catch (error) {
           logInfo("removeProtectedSite failed", error);
-          debugBroadcast("message-handler:removeProtectedSite:error", {
-            message: (error as Error)?.message ?? String(error),
-          });
           sendResponse({ status: "error" });
         }
       },
@@ -436,7 +356,6 @@ export class BackgroundService implements IBackgroundService {
     this.messageService.onMessage(
       "isCurrentSiteProtected",
       async (_payload, _sender, sendResponse) => {
-        debugBroadcast("message-handler:isCurrentSiteProtected");
         let hostname: string | null = null;
         try {
           hostname = await getCurrentHostname();
@@ -458,9 +377,6 @@ export class BackgroundService implements IBackgroundService {
           sendResponse({ protected: protectedNow, hostname, supported: true });
         } catch (error) {
           logInfo("isCurrentSiteProtected failed", error);
-          debugBroadcast("message-handler:isCurrentSiteProtected:error", {
-            message: (error as Error)?.message ?? String(error),
-          });
           sendResponse({
             protected: false,
             hostname,
@@ -473,7 +389,6 @@ export class BackgroundService implements IBackgroundService {
     this.registerSafetyHandler(
       "setCurrentSiteProtected",
       async (payload, _sender, sendResponse) => {
-        debugBroadcast("message-handler:setCurrentSiteProtected");
         let hostname: string | null = null;
         try {
           hostname = await getCurrentHostname();
@@ -508,9 +423,6 @@ export class BackgroundService implements IBackgroundService {
           });
         } catch (error) {
           logInfo("setCurrentSiteProtected failed", error);
-          debugBroadcast("message-handler:setCurrentSiteProtected:error", {
-            message: (error as Error)?.message ?? String(error),
-          });
           sendResponse({
             status: "error",
             protected: false,
@@ -524,14 +436,10 @@ export class BackgroundService implements IBackgroundService {
     this.messageService.onMessage(
       "getRecentlyClosedTabs",
       async (_payload, _sender, sendResponse) => {
-        debugBroadcast("message-handler:getRecentlyClosedTabs");
         try {
           sendResponse(await this.openedTabManager.getHistorySnapshot());
         } catch (error) {
           logInfo("getRecentlyClosedTabs failed", error);
-          debugBroadcast("message-handler:getRecentlyClosedTabs:error", {
-            message: (error as Error)?.message ?? String(error),
-          });
           sendResponse({ tabs: [] });
         }
       },
@@ -552,15 +460,11 @@ export class BackgroundService implements IBackgroundService {
     this.messageService.onMessage(
       "clearRecentlyClosedTabs",
       async (_payload, _sender, sendResponse) => {
-        debugBroadcast("message-handler:clearRecentlyClosedTabs");
         try {
           await this.openedTabManager.clearRecentlyClosed();
           sendResponse({ status: "ok" });
         } catch (error) {
           logInfo("clearRecentlyClosedTabs failed", error);
-          debugBroadcast("message-handler:clearRecentlyClosedTabs:error", {
-            message: (error as Error)?.message ?? String(error),
-          });
           sendResponse({ status: "error" });
         }
       },
@@ -604,14 +508,10 @@ export class BackgroundService implements IBackgroundService {
     this.messageService.onMessage(
       "getSnoozeStatus",
       async (_payload, _sender, sendResponse) => {
-        debugBroadcast("message-handler:getSnoozeStatus");
         try {
           sendResponse(await this.snoozeManager.getStatus());
         } catch (error) {
           logInfo("getSnoozeStatus failed", error);
-          debugBroadcast("message-handler:getSnoozeStatus:error", {
-            message: (error as Error)?.message ?? String(error),
-          });
           sendResponse({
             status: "error",
             snoozed: false,
@@ -625,7 +525,6 @@ export class BackgroundService implements IBackgroundService {
     this.registerSafetyHandler(
       "setSnooze",
       async (payload, _sender, sendResponse) => {
-        debugBroadcast("message-handler:setSnooze");
         try {
           const status = await this.snoozeManager.setSnooze(payload.minutes);
           if (status.snoozed) {
@@ -638,9 +537,6 @@ export class BackgroundService implements IBackgroundService {
           });
         } catch (error) {
           logInfo("setSnooze failed", error);
-          debugBroadcast("message-handler:setSnooze:error", {
-            message: (error as Error)?.message ?? String(error),
-          });
           sendResponse({ status: "error", snoozed: false, until: null });
         }
       },
@@ -649,15 +545,11 @@ export class BackgroundService implements IBackgroundService {
     this.registerSafetyHandler(
       "clearSnooze",
       async (_payload, _sender, sendResponse) => {
-        debugBroadcast("message-handler:clearSnooze");
         try {
           await this.snoozeManager.clearSnooze();
           sendResponse({ status: "ok", snoozed: false, until: null });
         } catch (error) {
           logInfo("clearSnooze failed", error);
-          debugBroadcast("message-handler:clearSnooze:error", {
-            message: (error as Error)?.message ?? String(error),
-          });
           sendResponse({ status: "error", snoozed: false, until: null });
         }
       },

@@ -16,7 +16,6 @@ export interface IBrowserExtensionActionAPI {
 }
 
 export interface IBrowserRuntimeAPI {
-  getLastError: () => chrome.runtime.LastError | undefined;
   onInstalled: chrome.runtime.RuntimeInstalledEvent;
   onMessage: chrome.runtime.ExtensionMessageEvent;
   onStartup: chrome.runtime.RuntimeEvent;

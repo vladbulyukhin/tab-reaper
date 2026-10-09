@@ -520,13 +520,13 @@ test.describe("extension state across Chrome worker and tab restarts", () => {
       await expect.poll(() => queryTabsByUrl(page, keptUrl)).toHaveLength(1);
       await activateTab(page, restoredKept.id);
       await expect
-        .poll(() =>
-          sendExtensionMessage<boolean>(
-            page,
-            "isCurrentTabExcluded",
-            undefined,
-          ),
-        )
+        .poll(async () => {
+          const state = await sendExtensionMessage<{
+            kept: boolean;
+            uncertain: boolean;
+          }>(page, "getCurrentTabKeepState", undefined);
+          return state.kept || state.uncertain;
+        })
         .toBe(true);
       await removeTabs(page, [restoredKeptId, restoredActiveId]);
     });

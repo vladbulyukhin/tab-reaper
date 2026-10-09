@@ -1,10 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { emptyConfiguration } from "../../common/models/Configuration";
-import { logInfo } from "../utils/log";
+import { logInfo } from "../../common/utils/log";
 import { BackgroundService } from "./BackgroundService";
 
-vi.mock("../utils/log", () => ({
-  debugBroadcast: vi.fn(),
+vi.mock("../../common/utils/log", () => ({
   logInfo: vi.fn(),
 }));
 
@@ -288,30 +287,6 @@ describe("BackgroundService current-site protocol support", () => {
 
     expect(clearRecentlyClosed).toHaveBeenCalledOnce();
     expect(sendResponse).toHaveBeenCalledWith({ status: "ok" });
-  });
-
-  it("checks the current exclusion against the current tab URL", async () => {
-    const { getHandler, isExcluded, keepDiagnostics } =
-      createCurrentSiteHarness("https://example.com/current");
-    const sendResponse = vi.fn();
-
-    await getHandler("isCurrentTabExcluded")(
-      {},
-      {} as chrome.runtime.MessageSender,
-      sendResponse,
-    );
-
-    expect(isExcluded).toHaveBeenCalledWith(1, "https://example.com/current");
-    expect(sendResponse).toHaveBeenCalledWith(false);
-    expect(keepDiagnostics).toEqual([
-      {
-        details: {
-          excluded: false,
-          tab: { id: 1, url: "https://example.com/current" },
-        },
-        event: "keep-state-read",
-      },
-    ]);
   });
 
   it("records the resolved tab and stored state for a Keep write", async () => {

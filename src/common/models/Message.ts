@@ -6,7 +6,6 @@ import type { RemovedTab } from "./Tab";
 export type MessagePayloads = {
   getConfig: undefined;
   setConfig: Partial<Omit<IConfiguration, "version">>;
-  isCurrentTabExcluded: undefined;
   getCurrentTabKeepState: undefined;
   setCurrentTabExcluded: { excluded: boolean };
   forgetCurrentTabSavedKeeps: undefined;
@@ -30,7 +29,6 @@ export type MessagePayloads = {
 export type MessageResponses = {
   getConfig: IConfiguration;
   setConfig: { status: string };
-  isCurrentTabExcluded: boolean;
   getCurrentTabKeepState: {
     status: "ok" | "error";
     kept: boolean;

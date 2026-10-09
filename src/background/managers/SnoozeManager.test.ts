@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { IBrowserApiProvider } from "../../api/IBrowserApiProvider";
-import { logInfo } from "../utils/log";
+import { logInfo } from "../../common/utils/log";
 import { type ISnoozeManager, SnoozeManager } from "./SnoozeManager";
 
-vi.mock("../utils/log", () => ({
+vi.mock("../../common/utils/log", () => ({
   logInfo: vi.fn(),
 }));
 

@@ -1,7 +1,7 @@
 import type { IBrowserApiProvider } from "../../api/IBrowserApiProvider";
+import { logInfo } from "../../common/utils/log";
 import { PersistedValue } from "../utils/PersistedValue";
 import { SequentialTaskQueue } from "../utils/SequentialTaskQueue";
-import { logInfo } from "../utils/log";
 
 export type SnoozeStatus = {
   snoozed: boolean;
@@ -299,11 +299,7 @@ export class SnoozeManager implements ISnoozeManager {
       this.earlyRescheduledUntil = null;
     }
 
-    try {
-      if (__DEBUG__) {
-        logInfo("Snooze ended");
-      }
-    } catch {}
+    logInfo("Snooze ended");
 
     for (const cb of this.endListeners) {
       try {
