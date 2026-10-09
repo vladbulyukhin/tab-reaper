@@ -4,7 +4,7 @@ import {
   emptyConfiguration,
   toConfiguration,
 } from "../../common/models/Configuration";
-import { PersistedValue } from "../utils/PersistedValue";
+import { SyncedValue } from "../utils/SyncedValue";
 
 export interface IConfigurationManager {
   get(): Promise<IConfiguration>;
@@ -12,26 +12,54 @@ export interface IConfigurationManager {
 }
 
 export class ConfigurationManager implements IConfigurationManager {
-  private readonly configuration: PersistedValue<IConfiguration>;
-
+  private readonly configuration: SyncedValue<IConfiguration>;
   constructor(
-    private readonly browserApiProvider: Pick<
-      IBrowserApiProvider,
-      "syncStorage"
-    >,
+    storage: Pick<IBrowserApiProvider, "syncStorage" | "localStorage">,
   ) {
-    this.configuration = new PersistedValue<IConfiguration>(
-      this.browserApiProvider.syncStorage,
+    this.configuration = new SyncedValue(
+      storage,
       "configuration",
       emptyConfiguration,
+      (value) => this.parseConfiguration(value),
     );
   }
-
-  public async get(): Promise<IConfiguration> {
-    return toConfiguration(await this.configuration.get());
+  public get(): Promise<IConfiguration> {
+    return this.configuration.get();
   }
+  public save(configuration: Partial<IConfiguration>): Promise<void> {
+    return this.configuration.update((current) =>
+      toConfiguration({ ...current, ...configuration }),
+    );
+  }
+  private parseConfiguration(value: unknown): IConfiguration | null {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      return null;
+    }
 
-  public async save(configuration: Partial<IConfiguration>): Promise<void> {
-    await this.configuration.update(() => toConfiguration(configuration));
+    const configuration = value as Partial<IConfiguration>;
+    if (
+      (configuration.diagnosticsEnabled !== undefined &&
+        typeof configuration.diagnosticsEnabled !== "boolean") ||
+      (configuration.keepAudibleTabs !== undefined &&
+        typeof configuration.keepAudibleTabs !== "boolean") ||
+      (configuration.keepGroupedTabs !== undefined &&
+        typeof configuration.keepGroupedTabs !== "boolean") ||
+      (configuration.keepPinnedTabs !== undefined &&
+        typeof configuration.keepPinnedTabs !== "boolean") ||
+      (configuration.rememberRecentlyClosedTabs !== undefined &&
+        typeof configuration.rememberRecentlyClosedTabs !== "boolean") ||
+      (configuration.removeExactDuplicates !== undefined &&
+        typeof configuration.removeExactDuplicates !== "boolean") ||
+      (configuration.tabCountThreshold !== undefined &&
+        typeof configuration.tabCountThreshold !== "number") ||
+      (configuration.tabRemovalDelayMin !== undefined &&
+        typeof configuration.tabRemovalDelayMin !== "number") ||
+      (configuration.version !== undefined &&
+        typeof configuration.version !== "number")
+    ) {
+      return null;
+    }
+
+    return toConfiguration(configuration);
   }
 }

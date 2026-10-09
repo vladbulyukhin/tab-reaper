@@ -4,6 +4,8 @@
 
 @layer base {
   :root {
+    --popup-width: 412px;
+    --popup-height: 600px;
     --background: 0 0% 100%;
     --foreground: 240 10% 3.9%;
 
@@ -67,10 +69,39 @@
 }
 
 @layer base {
+  html,
+  body,
+  #root {
+    width: var(--popup-width);
+    min-width: var(--popup-width);
+    max-width: var(--popup-width);
+    height: var(--popup-height);
+    min-height: var(--popup-height);
+    max-height: var(--popup-height);
+    margin: 0;
+    overflow: hidden;
+  }
+
   * {
+    box-sizing: border-box;
     @apply border-border;
   }
   body {
     @apply bg-background text-foreground;
+  }
+
+  html[data-popup-platform="ios"],
+  html[data-popup-platform="ios"] body,
+  html[data-popup-platform="ios"] #root {
+      width: 100vw;
+      min-width: 0;
+      max-width: 100vw;
+      height: 100dvh;
+      min-height: 0;
+      max-height: 100dvh;
+  }
+
+  html[data-popup-platform="ios"] body {
+    padding-bottom: env(safe-area-inset-bottom);
   }
 }

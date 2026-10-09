@@ -48,6 +48,12 @@ export class SettingsPage {
     await input.blur();
   }
 
+  async setSafetyThreshold(count: number) {
+    const input = this.page.getByTestId("tabCountThreshold");
+    await input.fill(count.toString());
+    await input.blur();
+  }
+
   async setRemoveExactDuplicates(enabled: boolean) {
     const input = this.page.getByTestId("removeExactDuplicates");
     if (enabled) {
@@ -55,5 +61,14 @@ export class SettingsPage {
     } else {
       await input.uncheck();
     }
+  }
+
+  async addProtectedSite(hostname: string) {
+    await this.page.getByTestId("protectedSiteInput").fill(hostname);
+    await this.page.getByTestId("addProtectedSite").click();
+  }
+
+  async protectCurrentSite() {
+    await this.page.getByTestId("addCurrentProtectedSite").click();
   }
 }

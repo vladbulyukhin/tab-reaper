@@ -1,4 +1,10 @@
 import type { IBrowserApiProvider } from "../../api/IBrowserApiProvider";
+import { emptyConfiguration } from "../../common/models/Configuration";
+import type {
+  MessagePayloads,
+  MessageResponses,
+  MessageTypes,
+} from "../../common/models/Message";
 import {
   type IMessageService,
   MessageService,
@@ -12,11 +18,16 @@ import {
   type IExcludedTabManager,
 } from "../managers/ExcludedTabManager";
 import { ExtensionActionManager } from "../managers/ExtensionActionManager";
+import { IdleTabLedger } from "../managers/IdleTabLedger";
 import {
   type IOpenedTabManager,
   OpenedTabManager,
 } from "../managers/OpenedTabManager";
+import { ProtectedSiteManager } from "../managers/ProtectedSiteManager";
+import { SnoozeManager } from "../managers/SnoozeManager";
 import { TabAlarmManager } from "../managers/TabAlarmManager";
+import { toKeepDiagnosticsTab } from "../utils/DiagnosticTabs";
+import { debugBroadcast, logInfo } from "../utils/log";
 
 export interface IBackgroundService {
   start(): void;
@@ -27,50 +38,141 @@ export class BackgroundService implements IBackgroundService {
   private readonly messageService: IMessageService;
   private readonly configurationManager: IConfigurationManager;
   private readonly excludedTabManager: IExcludedTabManager;
+  private readonly protectedSiteManager: ProtectedSiteManager;
+  private readonly snoozeManager: SnoozeManager;
 
   constructor(private readonly browserApiProvider: IBrowserApiProvider) {
+    logInfo("BackgroundService init");
+    debugBroadcast("background-service-init");
     const tabAlarmManager = new TabAlarmManager(browserApiProvider);
+    debugBroadcast("tab-alarm-manager-init");
     const extensionActionManager = new ExtensionActionManager(
       browserApiProvider,
     );
+    debugBroadcast("extension-action-manager-init");
+    const idleTabLedger = new IdleTabLedger(browserApiProvider.localStorage);
 
     this.excludedTabManager = new ExcludedTabManager(
       browserApiProvider,
       extensionActionManager,
+      idleTabLedger,
     );
+    debugBroadcast("excluded-tab-manager-init");
+    this.protectedSiteManager = new ProtectedSiteManager(browserApiProvider);
+    debugBroadcast("protected-site-manager-init");
+    this.snoozeManager = new SnoozeManager(browserApiProvider);
+    debugBroadcast("snooze-manager-init");
     this.configurationManager = new ConfigurationManager(browserApiProvider);
+    debugBroadcast("configuration-manager-init");
     this.openedTabManager = new OpenedTabManager(
       browserApiProvider,
       tabAlarmManager,
       this.excludedTabManager,
+      this.protectedSiteManager,
+      this.snoozeManager,
       this.configurationManager,
       extensionActionManager,
+      idleTabLedger,
     );
+    debugBroadcast("opened-tab-manager-init");
     this.messageService = new MessageService(browserApiProvider);
+    debugBroadcast("message-service-init");
   }
 
   public start(): void {
-    this.openedTabManager.watchTabs();
     this.registerMessageHandlers();
+    logInfo("BackgroundService start");
+    debugBroadcast("background-service-start");
+    this.snoozeManager.onEnded(() => {
+      debugBroadcast("snooze-ended");
+      void this.openedTabManager.rescheduleOpenTabs().catch((error) => {
+        logInfo("Failed to reschedule tabs after snooze ended", error);
+      });
+    });
+    void this.snoozeManager.ensureAlarmScheduled().catch((error) => {
+      logInfo("Failed to reconcile snooze state", error);
+    });
+    this.openedTabManager.watchTabs();
+    void this.openedTabManager
+      .restoreHistoryBadge()
+      .catch((error) => logInfo("Failed to restore history badge", error));
+    void (async () => {
+      let diagnosticsEnabled = emptyConfiguration.diagnosticsEnabled;
+      try {
+        diagnosticsEnabled = (await this.configurationManager.get())
+          .diagnosticsEnabled;
+      } catch {}
+      await this.openedTabManager.setDiagnosticsEnabled(diagnosticsEnabled);
+      await this.openedTabManager.rescheduleOpenTabs();
+    })().catch((error) => {
+      logInfo("Failed to reconcile open tabs at background startup", error);
+    });
   }
 
   registerMessageHandlers() {
+    logInfo("Registering message handlers");
+    debugBroadcast("register-message-handlers");
     this.messageService.onMessage(
       "getConfig",
       async (_payload, _sender, sendResponse) => {
-        const configuration = await this.configurationManager.get();
-        sendResponse(configuration);
+        debugBroadcast("message-handler:getConfig");
+        try {
+          const configuration = await this.configurationManager.get();
+          sendResponse(configuration);
+        } catch (error) {
+          logInfo("getConfig failed", error);
+          debugBroadcast("message-handler:getConfig:error", {
+            message: (error as Error)?.message ?? String(error),
+          });
+          sendResponse(emptyConfiguration);
+        }
+      },
+    );
+
+    this.registerSafetyHandler(
+      "setConfig",
+      async (payload, _sender, sendResponse) => {
+        debugBroadcast("message-handler:setConfig");
+        try {
+          const previousConfiguration = await this.configurationManager.get();
+          await this.configurationManager.save(payload);
+          const nextConfiguration = await this.configurationManager.get();
+          await this.openedTabManager.setDiagnosticsEnabled(
+            nextConfiguration.diagnosticsEnabled,
+          );
+          await this.openedTabManager.syncRecentlyClosedPersistence();
+          await this.openedTabManager.rescheduleOpenTabs({
+            recalculateIdleDeadlines:
+              typeof payload.tabRemovalDelayMin === "number" &&
+              payload.tabRemovalDelayMin !==
+                previousConfiguration.tabRemovalDelayMin,
+          });
+          sendResponse({ status: "ok" });
+        } catch (error) {
+          logInfo("setConfig failed", error);
+          debugBroadcast("message-handler:setConfig:error", {
+            message: (error as Error)?.message ?? String(error),
+          });
+          sendResponse({ status: "error" });
+        }
       },
     );
 
     this.messageService.onMessage(
-      "setConfig",
-      async (payload, _sender, sendResponse) => {
+      "getCurrentTabKeepState",
+      async (_payload, _sender, respond) => {
         try {
-          await this.configurationManager.save(payload);
-          sendResponse({ status: "ok" });
-        } catch (e) {
-          sendResponse({ status: "error" });
+          const [tab] = await this.browserApiProvider.tab.query({
+            active: true,
+            currentWindow: true,
+          });
+          const state =
+            typeof tab?.id === "number"
+              ? await this.excludedTabManager.getKeepState(tab.id, tab.url)
+              : { kept: false, uncertain: false };
+          respond({ status: "ok", ...state });
+        } catch {
+          respond({ status: "error", kept: false, uncertain: false });
         }
       },
     );
@@ -78,43 +180,320 @@ export class BackgroundService implements IBackgroundService {
     this.messageService.onMessage(
       "isCurrentTabExcluded",
       async (_payload, _sender, sendResponse) => {
-        const [currentTab] = await this.browserApiProvider.tab.query({
-          active: true,
-          currentWindow: true,
-        });
+        debugBroadcast("message-handler:isCurrentTabExcluded");
+        try {
+          const [currentTab] = await this.browserApiProvider.tab.query({
+            active: true,
+            currentWindow: true,
+          });
 
-        if (currentTab?.id) {
-          const isExcluded = await this.excludedTabManager.isExcluded(
-            currentTab.id,
+          if (typeof currentTab?.id === "number") {
+            const isExcluded = await this.excludedTabManager.isExcluded(
+              currentTab.id,
+              currentTab.url,
+            );
+            this.openedTabManager.recordKeepStateDiagnostic("keep-state-read", {
+              excluded: isExcluded,
+              tab: toKeepDiagnosticsTab(currentTab),
+            });
+            sendResponse(isExcluded);
+          } else {
+            this.openedTabManager.recordKeepStateDiagnostic("keep-state-read", {
+              excluded: false,
+              tab: null,
+            });
+            sendResponse(false);
+          }
+        } catch (error) {
+          logInfo("isCurrentTabExcluded failed", error);
+          debugBroadcast("message-handler:isCurrentTabExcluded:error", {
+            message: (error as Error)?.message ?? String(error),
+          });
+          this.openedTabManager.recordKeepStateDiagnostic(
+            "keep-state-read-failed",
+            { message: (error as Error)?.message ?? String(error) },
           );
-          sendResponse(isExcluded);
-        } else {
           sendResponse(false);
         }
       },
     );
 
-    this.messageService.onMessage(
+    this.registerSafetyHandler(
       "setCurrentTabExcluded",
       async (payload, _sender, sendResponse) => {
-        const [currentTab] = await this.browserApiProvider.tab.query({
-          active: true,
-          currentWindow: true,
-        });
+        debugBroadcast("message-handler:setCurrentTabExcluded");
+        try {
+          const [currentTab] = await this.browserApiProvider.tab.query({
+            active: true,
+            currentWindow: true,
+          });
 
-        if (currentTab?.id) {
-          try {
-            if (payload.excluded) {
-              await this.excludedTabManager.exclude(currentTab.id);
-            } else {
-              await this.excludedTabManager.include(currentTab.id);
+          if (typeof currentTab?.id === "number") {
+            const diagnosticTab = toKeepDiagnosticsTab(currentTab);
+            this.openedTabManager.recordKeepStateDiagnostic(
+              "keep-state-write-requested",
+              {
+                requestedExcluded: payload.excluded,
+                tab: diagnosticTab,
+              },
+            );
+            try {
+              if (payload.excluded) {
+                await this.excludedTabManager.exclude(currentTab.id);
+              } else {
+                await this.excludedTabManager.include(currentTab.id);
+              }
+              const storedExcluded = await this.excludedTabManager.isExcluded(
+                currentTab.id,
+                currentTab.url,
+              );
+              if (storedExcluded !== payload.excluded) {
+                this.openedTabManager.recordKeepStateDiagnostic(
+                  "keep-state-write-failed",
+                  {
+                    requestedExcluded: payload.excluded,
+                    storedExcluded,
+                    tab: diagnosticTab,
+                  },
+                );
+                sendResponse({ status: "error" });
+                return;
+              }
+              this.openedTabManager.recordKeepStateDiagnostic(
+                "keep-state-write-completed",
+                {
+                  requestedExcluded: payload.excluded,
+                  storedExcluded,
+                  tab: diagnosticTab,
+                },
+              );
+              sendResponse({ status: "ok" });
+            } catch (error) {
+              logInfo("setCurrentTabExcluded failed", error);
+              debugBroadcast("message-handler:setCurrentTabExcluded:error", {
+                message: (error as Error)?.message ?? String(error),
+              });
+              this.openedTabManager.recordKeepStateDiagnostic(
+                "keep-state-write-failed",
+                {
+                  message: (error as Error)?.message ?? String(error),
+                  requestedExcluded: payload.excluded,
+                  tab: diagnosticTab,
+                },
+              );
+              sendResponse({ status: "error" });
             }
-            sendResponse({ status: "ok" });
-          } catch (e) {
+          } else {
+            this.openedTabManager.recordKeepStateDiagnostic(
+              "keep-state-write-failed",
+              {
+                message: "No active tab resolved",
+                requestedExcluded: payload.excluded,
+                tab: null,
+              },
+            );
             sendResponse({ status: "error" });
           }
-        } else {
+        } catch (error) {
+          logInfo("setCurrentTabExcluded failed", error);
+          debugBroadcast("message-handler:setCurrentTabExcluded:error", {
+            message: (error as Error)?.message ?? String(error),
+          });
+          this.openedTabManager.recordKeepStateDiagnostic(
+            "keep-state-write-failed",
+            {
+              message: (error as Error)?.message ?? String(error),
+              requestedExcluded: payload.excluded,
+              tab: null,
+            },
+          );
           sendResponse({ status: "error" });
+        }
+      },
+    );
+
+    this.registerSafetyHandler(
+      "forgetCurrentTabSavedKeeps",
+      async (_payload, _sender, sendResponse) => {
+        try {
+          const [active] = await this.browserApiProvider.tab.query({
+            active: true,
+            currentWindow: true,
+          });
+          if (active?.id === undefined || !active.url)
+            throw new Error("No active tab resolved");
+          const visibleTabs = await this.browserApiProvider.tab.query({});
+          const cleared = await this.excludedTabManager.forgetSavedKeeps(
+            active.id,
+            visibleTabs,
+            active.url,
+          );
+          await this.openedTabManager.rescheduleOpenTabs();
+          sendResponse({ status: "ok", cleared });
+        } catch (error) {
+          logInfo("forgetCurrentTabSavedKeeps failed", error);
+          sendResponse({ status: "error", cleared: 0 });
+        }
+      },
+    );
+
+    this.messageService.onMessage(
+      "getProtectedSites",
+      async (_payload, _sender, sendResponse) => {
+        debugBroadcast("message-handler:getProtectedSites");
+        try {
+          sendResponse({ sites: await this.protectedSiteManager.list() });
+        } catch (error) {
+          logInfo("getProtectedSites failed", error);
+          debugBroadcast("message-handler:getProtectedSites:error", {
+            message: (error as Error)?.message ?? String(error),
+          });
+          sendResponse({ sites: [] });
+        }
+      },
+    );
+
+    this.registerSafetyHandler(
+      "addProtectedSite",
+      async (payload, _sender, sendResponse) => {
+        debugBroadcast("message-handler:addProtectedSite");
+        try {
+          await this.protectedSiteManager.add(payload.hostname);
+          await this.openedTabManager.rescheduleOpenTabs();
+          sendResponse({ status: "ok" });
+        } catch (error) {
+          logInfo("addProtectedSite failed", error);
+          debugBroadcast("message-handler:addProtectedSite:error", {
+            message: (error as Error)?.message ?? String(error),
+          });
+          sendResponse({ status: "error" });
+        }
+      },
+    );
+
+    this.registerSafetyHandler(
+      "removeProtectedSite",
+      async (payload, _sender, sendResponse) => {
+        debugBroadcast("message-handler:removeProtectedSite");
+        try {
+          await this.protectedSiteManager.remove(payload.hostname);
+          await this.openedTabManager.rescheduleOpenTabs();
+          sendResponse({ status: "ok" });
+        } catch (error) {
+          logInfo("removeProtectedSite failed", error);
+          debugBroadcast("message-handler:removeProtectedSite:error", {
+            message: (error as Error)?.message ?? String(error),
+          });
+          sendResponse({ status: "error" });
+        }
+      },
+    );
+
+    const getCurrentHostname = async (): Promise<string | null> => {
+      const [currentTab] = await this.browserApiProvider.tab.query({
+        active: true,
+        currentWindow: true,
+      });
+
+      const url = currentTab?.url ?? null;
+      if (!url) return null;
+      try {
+        const parsed = new URL(url);
+        if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+          return null;
+        }
+        return parsed.hostname.toLowerCase().replace(/\.$/, "");
+      } catch {
+        return null;
+      }
+    };
+
+    this.messageService.onMessage(
+      "isCurrentSiteProtected",
+      async (_payload, _sender, sendResponse) => {
+        debugBroadcast("message-handler:isCurrentSiteProtected");
+        let hostname: string | null = null;
+        try {
+          hostname = await getCurrentHostname();
+          if (!hostname) {
+            sendResponse({
+              protected: false,
+              hostname: null,
+              supported: false,
+            });
+            return;
+          }
+
+          const supportedHostname = hostname;
+          const protectedNow = (await this.protectedSiteManager.list()).some(
+            (rule) =>
+              supportedHostname === rule ||
+              supportedHostname.endsWith(`.${rule}`),
+          );
+          sendResponse({ protected: protectedNow, hostname, supported: true });
+        } catch (error) {
+          logInfo("isCurrentSiteProtected failed", error);
+          debugBroadcast("message-handler:isCurrentSiteProtected:error", {
+            message: (error as Error)?.message ?? String(error),
+          });
+          sendResponse({
+            protected: false,
+            hostname,
+            supported: hostname !== null,
+          });
+        }
+      },
+    );
+
+    this.registerSafetyHandler(
+      "setCurrentSiteProtected",
+      async (payload, _sender, sendResponse) => {
+        debugBroadcast("message-handler:setCurrentSiteProtected");
+        let hostname: string | null = null;
+        try {
+          hostname = await getCurrentHostname();
+          if (!hostname) {
+            sendResponse({
+              status: "error",
+              protected: false,
+              hostname: null,
+              supported: false,
+            });
+            return;
+          }
+
+          if (payload.protected) {
+            await this.protectedSiteManager.add(hostname);
+          } else {
+            await this.protectedSiteManager.remove(hostname);
+          }
+
+          await this.openedTabManager.rescheduleOpenTabs();
+
+          const supportedHostname = hostname;
+          const protectedNow = (await this.protectedSiteManager.list()).some(
+            (rule) =>
+              supportedHostname === rule ||
+              supportedHostname.endsWith(`.${rule}`),
+          );
+
+          sendResponse({
+            status: "ok",
+            protected: protectedNow,
+            hostname,
+            supported: true,
+          });
+        } catch (error) {
+          logInfo("setCurrentSiteProtected failed", error);
+          debugBroadcast("message-handler:setCurrentSiteProtected:error", {
+            message: (error as Error)?.message ?? String(error),
+          });
+          sendResponse({
+            status: "error",
+            protected: false,
+            hostname,
+            supported: hostname !== null,
+          });
         }
       },
     );
@@ -122,12 +501,171 @@ export class BackgroundService implements IBackgroundService {
     this.messageService.onMessage(
       "getRecentlyClosedTabs",
       async (_payload, _sender, sendResponse) => {
-        const recentlyClosedTabs =
-          await this.openedTabManager.getRecentlyClosed();
-        sendResponse({ tabs: recentlyClosedTabs });
+        debugBroadcast("message-handler:getRecentlyClosedTabs");
+        try {
+          sendResponse(await this.openedTabManager.getHistorySnapshot());
+        } catch (error) {
+          logInfo("getRecentlyClosedTabs failed", error);
+          debugBroadcast("message-handler:getRecentlyClosedTabs:error", {
+            message: (error as Error)?.message ?? String(error),
+          });
+          sendResponse({ tabs: [] });
+        }
+      },
+    );
+
+    this.messageService.onMessage(
+      "acknowledgeRecentlyClosedTabs",
+      async (payload, _sender, sendResponse) => {
+        try {
+          await this.openedTabManager.acknowledgeHistory(payload.activityToken);
+          sendResponse({ status: "ok" });
+        } catch {
+          sendResponse({ status: "error" });
+        }
+      },
+    );
+
+    this.messageService.onMessage(
+      "clearRecentlyClosedTabs",
+      async (_payload, _sender, sendResponse) => {
+        debugBroadcast("message-handler:clearRecentlyClosedTabs");
+        try {
+          await this.openedTabManager.clearRecentlyClosed();
+          sendResponse({ status: "ok" });
+        } catch (error) {
+          logInfo("clearRecentlyClosedTabs failed", error);
+          debugBroadcast("message-handler:clearRecentlyClosedTabs:error", {
+            message: (error as Error)?.message ?? String(error),
+          });
+          sendResponse({ status: "error" });
+        }
+      },
+    );
+
+    this.messageService.onMessage(
+      "getCleanupDiagnostics",
+      async (_payload, _sender, sendResponse) => {
+        try {
+          sendResponse(await this.openedTabManager.getCleanupDiagnostics());
+        } catch (error) {
+          logInfo("getCleanupDiagnostics failed", error);
+          sendResponse({
+            alarms: [],
+            background: {
+              instanceId: "unavailable",
+              sessionStorageKind:
+                this.browserApiProvider.sessionStorageKind ?? "memory-fallback",
+            },
+            events: [],
+            ledger: { records: [] },
+            queries: { allTabs: [], inactiveTabs: [] },
+          });
+        }
+      },
+    );
+
+    this.messageService.onMessage(
+      "clearCleanupDiagnostics",
+      async (_payload, _sender, sendResponse) => {
+        try {
+          await this.openedTabManager.clearCleanupDiagnostics();
+          sendResponse({ status: "ok" });
+        } catch (error) {
+          logInfo("clearCleanupDiagnostics failed", error);
+          sendResponse({ status: "error" });
+        }
+      },
+    );
+
+    this.messageService.onMessage(
+      "getSnoozeStatus",
+      async (_payload, _sender, sendResponse) => {
+        debugBroadcast("message-handler:getSnoozeStatus");
+        try {
+          sendResponse(await this.snoozeManager.getStatus());
+        } catch (error) {
+          logInfo("getSnoozeStatus failed", error);
+          debugBroadcast("message-handler:getSnoozeStatus:error", {
+            message: (error as Error)?.message ?? String(error),
+          });
+          sendResponse({
+            status: "error",
+            snoozed: false,
+            until: null,
+            remainingMinutes: null,
+          });
+        }
+      },
+    );
+
+    this.registerSafetyHandler(
+      "setSnooze",
+      async (payload, _sender, sendResponse) => {
+        debugBroadcast("message-handler:setSnooze");
+        try {
+          const status = await this.snoozeManager.setSnooze(payload.minutes);
+          if (status.snoozed) {
+            await this.openedTabManager.clearScheduledRemovals();
+          } else {
+            await this.openedTabManager.rescheduleOpenTabs();
+          }
+          sendResponse({
+            status: "ok",
+            snoozed: status.snoozed,
+            until: status.until,
+          });
+        } catch (error) {
+          logInfo("setSnooze failed", error);
+          debugBroadcast("message-handler:setSnooze:error", {
+            message: (error as Error)?.message ?? String(error),
+          });
+          sendResponse({ status: "error", snoozed: false, until: null });
+        }
+      },
+    );
+
+    this.registerSafetyHandler(
+      "clearSnooze",
+      async (_payload, _sender, sendResponse) => {
+        debugBroadcast("message-handler:clearSnooze");
+        try {
+          await this.snoozeManager.clearSnooze();
+          await this.openedTabManager.rescheduleOpenTabs();
+          sendResponse({ status: "ok", snoozed: false, until: null });
+        } catch (error) {
+          logInfo("clearSnooze failed", error);
+          debugBroadcast("message-handler:clearSnooze:error", {
+            message: (error as Error)?.message ?? String(error),
+          });
+          sendResponse({ status: "error", snoozed: false, until: null });
+        }
       },
     );
 
     this.messageService.listen();
+  }
+
+  private registerSafetyHandler<K extends MessageTypes>(
+    type: K,
+    handler: (
+      payload: MessagePayloads[K],
+      sender: chrome.runtime.MessageSender,
+      respond: (response: MessageResponses[K]) => void,
+    ) => Promise<void>,
+  ): void {
+    this.messageService.onMessage(type, async (payload, sender, respond) => {
+      const finish = this.openedTabManager.beginSafetyMutation();
+      try {
+        await handler(payload, sender, respond);
+      } finally {
+        finish();
+        await this.openedTabManager
+          .rescheduleOpenTabs()
+          .catch((error) =>
+            logInfo("Failed to reconcile cleanup after a policy change", error),
+          );
+      }
+    });
   }
 }

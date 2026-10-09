@@ -1,6 +1,7 @@
 export interface IBrowserAlarmAPI {
   create(name: string, alarmInfo: chrome.alarms.AlarmCreateInfo): Promise<void>;
   clear(name: string): Promise<void>;
+  getAll(): Promise<ReadonlyArray<chrome.alarms.Alarm>>;
   onAlarm: chrome.alarms.AlarmEvent;
 }
 
@@ -42,6 +43,7 @@ export interface IBrowserTabAPI {
   query(
     queryInfo: chrome.tabs.QueryInfo,
   ): Promise<ReadonlyArray<chrome.tabs.Tab>>;
+  sendMessage(tabId: number, message: unknown): Promise<unknown>;
   remove(tabId: number): Promise<void>;
 }
 
@@ -51,6 +53,7 @@ export interface IBrowserApiProvider {
   localStorage: IBrowserStorageAPI;
   runtime: IBrowserRuntimeAPI;
   sessionStorage: IBrowserStorageAPI;
+  sessionStorageKind: "memory-fallback" | "native";
   syncStorage: IBrowserStorageAPI;
   tab: IBrowserTabAPI;
 }
