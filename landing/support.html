@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#ffffff" />
+    <title>Support — Tab Reaper</title>
+    <meta name="description" content="Installation, cleanup rules and answers to the questions that come up most." />
+    <link rel="canonical" href="https://vladbulyukhin.github.io/tab-reaper/support.html" />
+    <link rel="icon" href="/logo.png" />
+    <link rel="stylesheet" href="/src/style.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet" />
+  </head>
+  <body class="document-page">
+    <a class="skip-link" href="#main-content">Skip to content</a>
+    <nav class="document-nav" aria-label="Main navigation"><a class="brand" href="./"><img src="/logo.png" alt="" />Tab Reaper</a><a href="./">← Back to home</a></nav>
+    <main id="main-content" class="document-main">
+      <header class="document-header"><p class="eyebrow">Support</p><h1>A little help. Back to browsing.</h1><p>Installation, cleanup rules and answers to the questions that come up most.</p><small>Last updated: October 5, 2026</small></header>
+      <div class="document-layout">
+        <aside><nav class="document-toc" aria-label="On this page"><p class="eyebrow">On this page</p><a href="#contact">Get in touch</a><a href="#install">How do I install it?</a><a href="#rules">Which tabs stay open?</a><a href="#timers">Will timers run while Safari is closed?</a><a href="#history">Can I get a closed tab back?</a><a href="#debug">Why didn’t a tab close?</a></nav></aside>
+        <div class="document-content"><section id="contact"><h2>Get in touch</h2><div class="contact-card"><p>Found a bug or need help? Email the developer, Vladislav Bulyukhin.</p><a class="button primary" href="mailto:vladislav.bulyukhin@gmail.com">Email support ↗</a><p class="contact-address">vladislav.bulyukhin@gmail.com</p></div><p>Include your device, browser and extension version, what you expected, and what happened. Diagnostics can help if available, but are optional. Review reports before sending: they may contain private tab details. For public bug reports, use <a href="https://github.com/vladbulyukhin/tab-reaper/issues">GitHub Issues</a> and remove personal information.</p></section>
+<section id="install"><h2>How do I install it?</h2><p><strong>Chrome:</strong> install from the <a href="https://chromewebstore.google.com/detail/lpdcbkckljbnkjbajmjhehdilncjjgii">Chrome Web Store</a>, then pin Tab Reaper from the extensions menu for easy access.</p><p><strong>Safari:</strong> the App Store release is coming soon. Once available, install the app and follow its setup instructions. On Mac, enable it under Safari → Settings → Extensions. On recent iOS versions, go to Settings → Apps → Safari → Extensions; older versions use Settings → Safari → Extensions. Open the extension from Safari’s extensions menu.</p></section>
+<section id="rules"><h2>Which tabs stay open?</h2><p>Active tabs are not idle-cleanup candidates. Use “Keep this tab” for a particular tab or protect a site to keep its tabs out of cleanup. Pinned, grouped and audible-tab handling depends on your settings and browser support. Pause cleanup whenever you need time to work.</p><p>The tab-count threshold applies to idle cleanup per browser window, not to duplicate removal. Check the options offered by your installed version.</p></section>
+<section id="timers"><h2>Will timers run while Safari is closed?</h2><p>iOS can suspend Safari and its extension, so cleanup cannot run continuously while the browser is unavailable. Newer versions save idle timing state and reconcile eligible tabs when Safari resumes. A tab may close after you return, rather than at the exact deadline while your phone is locked.</p><p>Only tabs made visible through the browser’s extension APIs can be managed. Other Safari tab groups may be handled when you switch back to them. Restoring ambiguous tab identities is conservative to avoid closing the wrong tab.</p></section>
+<section id="history"><h2>Can I get a closed tab back?</h2><p>Open Tab Reaper’s recently closed list and select the tab to reopen its URL. This is not a backup of page contents or unsaved work. Newer versions offer an optional “remember across restarts” setting and a clear-list button. Turning off remembering prevents that history from being retained across browser restarts.</p></section>
+<section id="debug"><h2>Why didn’t a tab close?</h2><p>Check whether cleanup is paused, the tab or site is protected, the window is below your idle threshold, or pinned/grouped/audible handling excludes it. A timeout change starts a new idle interval in newer versions. Safari may need time to resume its background extension.</p><p>Enable diagnostics in extension settings, reproduce the issue, and review the report. Disable diagnostics again if you do not want local event logging. If the issue persists, contact support with the relevant details.</p></section></div>
+      </div>
+    </main>
+    <footer><span><img src="/logo.png" alt="" />Tab Reaper · Less clutter. More you.</span><nav aria-label="Footer"><a href="./support.html" aria-current="page">Support</a><a href="./privacy.html">Privacy</a><a href="./terms.html">Terms</a><a href="https://github.com/vladbulyukhin/tab-reaper">Source ↗</a><span>© Vladislav Bulyukhin</span></nav></footer>
+  </body>
+</html>
