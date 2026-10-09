@@ -12,7 +12,7 @@ export interface IConfiguration {
 }
 
 export const emptyConfiguration: IConfiguration = {
-  diagnosticsEnabled: true,
+  diagnosticsEnabled: false,
   keepAudibleTabs: true,
   keepGroupedTabs: true,
   keepPinnedTabs: true,

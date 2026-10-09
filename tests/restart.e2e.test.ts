@@ -32,6 +32,7 @@ const configureCleanup = async (page: Page, delayMinutes: number) => {
   await expect(
     sendExtensionMessage(page, "setConfig", {
       ...current,
+      diagnosticsEnabled: true,
       removeExactDuplicates: false,
       tabCountThreshold: 0,
       tabRemovalDelayMin: delayMinutes,
@@ -331,6 +332,8 @@ test.describe("extension state across Chrome worker and tab restarts", () => {
       `chrome-extension://${extensionId}/src/popup/index.html#/settings`,
     );
     const toggle = page.getByTestId("diagnosticsEnabled");
+    await expect(toggle).not.toBeChecked();
+    await toggle.click();
     await expect(toggle).toBeChecked();
     await expect(page.getByTestId("cleanupDiagnostics")).toBeVisible();
 

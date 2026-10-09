@@ -188,8 +188,8 @@ export const Settings: React.FC = () => {
                         <div className="min-w-0">
                           <FormLabel>Remember across restarts</FormLabel>
                           <FormDescription className="mt-1">
-                            Keep recently reaped tabs on this device after
-                            Safari closes.
+                            Keep recently reaped tabs on this device after the
+                            browser closes.
                           </FormDescription>
                         </div>
                         <FormControl>

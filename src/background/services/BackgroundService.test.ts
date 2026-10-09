@@ -209,7 +209,7 @@ describe("BackgroundService.start snooze integration", () => {
     service.start();
 
     await vi.waitFor(() => expect(rescheduleOpenTabs).toHaveBeenCalledTimes(1));
-    expect(setDiagnosticsEnabled).toHaveBeenCalledWith(true);
+    expect(setDiagnosticsEnabled).toHaveBeenCalledWith(false);
     expect(setDiagnosticsEnabled.mock.invocationCallOrder[0]).toBeLessThan(
       rescheduleOpenTabs.mock.invocationCallOrder[0],
     );

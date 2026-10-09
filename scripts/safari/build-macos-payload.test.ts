@@ -128,7 +128,7 @@ it("builds and verifies an isolated complete payload without mutating Chrome or 
         ["status", "--porcelain=v1", "--untracked-files=normal"],
         { cwd: repositoryRoot, encoding: "utf8" },
       ).length > 0,
-    extensionVersion: "0.2.1",
+    extensionVersion: packageJson.version,
     payloadSha256: createHash("sha256").update(checksumContents).digest("hex"),
     nodeVersion: process.version,
     packageManager: packageJson.packageManager,

@@ -83,7 +83,7 @@ describe("ConfigurationManager", () => {
   });
 
   describe("get", () => {
-    it("enables diagnostics for legacy configurations and preserves an explicit opt-out", async () => {
+    it("keeps diagnostics off for legacy configurations and preserves an explicit opt-in", async () => {
       createManager({
         [configurationKey]: persistedConfiguration({
           keepPinnedTabs: true,
@@ -91,17 +91,17 @@ describe("ConfigurationManager", () => {
         }),
       });
       await expect(configurationManager.get()).resolves.toMatchObject({
-        diagnosticsEnabled: true,
+        diagnosticsEnabled: false,
       });
 
       createManager({
         [configurationKey]: persistedConfiguration({
-          diagnosticsEnabled: false,
+          diagnosticsEnabled: true,
           version: 6,
         }),
       });
       await expect(configurationManager.get()).resolves.toMatchObject({
-        diagnosticsEnabled: false,
+        diagnosticsEnabled: true,
       });
     });
 
