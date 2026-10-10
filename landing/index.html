@@ -12,15 +12,15 @@
     <meta name="description" content="Tab Reaper closes duplicate and forgotten tabs on your schedule, and keeps the ones you care about. For Safari and Chrome." />
     <meta property="og:title" content="Tab Reaper — Keep what matters. Reap the rest." />
     <meta property="og:description" content="A browser extension that closes duplicate and forgotten tabs on your schedule. For Safari and Chrome." />
-    <meta property="og:image" content="https://vladbulyukhin.github.io/tab-reaper/social.png" />
+    <meta property="og:image" content="%VITE_SITE_URL%/social.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:image:alt" content="Tab Reaper: Keep what matters. Reap the rest. Duplicate and idle tabs falling out of a browser window." />
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://vladbulyukhin.github.io/tab-reaper/" />
+    <meta property="og:url" content="%VITE_SITE_URL%/" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:image" content="https://vladbulyukhin.github.io/tab-reaper/social.png" />
-    <link rel="canonical" href="https://vladbulyukhin.github.io/tab-reaper/" />
+    <meta name="twitter:image" content="%VITE_SITE_URL%/social.png" />
+    <link rel="canonical" href="%VITE_SITE_URL%/" />
     <link rel="stylesheet" href="/src/style.css" />
   </head>
   <body>
@@ -98,7 +98,7 @@
                 <section class="rp-card rp-closed" aria-label="Recently closed">
                   <div class="rp-closed-head"><p class="rp-eyebrow">Recently closed</p><span class="rp-count" data-closed-count>0 saved</span></div>
                   <p class="rp-heading">Recently reaped tabs</p>
-                  <p class="rp-sub">Click a row to reopen a tab that Tab Reaper closed.</p>
+                  <p class="rp-sub">Select a tab to reopen it.</p>
                   <div class="rp-list" data-closed-list><p class="rp-empty" data-closed-empty>All set for now. Tabs you haven't visited in a while will show up here once they are cleaned up.</p></div>
                 </section>
               </div>
@@ -130,7 +130,7 @@
               <span class="v-tag">idle 3 days</span>
             </div>
             <h3>It’s automatic.</h3>
-            <p>Choose how long a tab can sit untouched. When time’s up, it’s quietly closed. Duplicates go right away.</p>
+            <p>Choose how long a tab can sit untouched. When time’s up, it’s quietly closed. Turn on duplicate removal and copies close right away.</p>
           </article>
           <article class="promise" data-vignette>
             <div class="vignette vignette-protect" aria-hidden="true">
@@ -154,7 +154,7 @@
         </div>
         <ul class="also" aria-label="Also included">
           <li>Pause cleanup any time</li>
-          <li>Timers per window</li>
+          <li>Leaves small windows alone</li>
           <li>Picks up after a restart</li>
           <li>No setup required</li>
         </ul>
