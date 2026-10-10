@@ -24,14 +24,35 @@ const displayHost = (url: string | null | undefined): string | null => {
   return !host ? null : host.replace(/^www\./, "");
 };
 
+// Second-level labels that sit under a country code, as in example.co.uk.
+const genericSecondLevel = new Set([
+  "ac",
+  "co",
+  "com",
+  "edu",
+  "gov",
+  "net",
+  "org",
+]);
+
+// The label people recognise a site by: "wikipedia" for en.wikipedia.org,
+// "mozilla" for developer.mozilla.org, "bbc" for www.bbc.co.uk.
+export const siteName = (host: string): string => {
+  const labels = host.split(".").filter(Boolean);
+  if (labels.length < 2) return labels[0] ?? "";
+  let index = labels.length - 2;
+  if (index > 0 && genericSecondLevel.has(labels[index])) index -= 1;
+  return labels[index];
+};
+
 // Safari may not supply favIconUrl for tabs. Keep initials as the local
 // fallback rather than guessing a website URL and making a network request.
-const initials = (
+export const initials = (
   pageUrl: string | null | undefined,
   title: string | null | undefined,
 ) => {
-  const host = displayHost(pageUrl);
-  const candidate = host?.split(".")[0] ?? title ?? "";
+  const host = hostnameFromUrl(pageUrl);
+  const candidate = (host && siteName(host)) || title || "";
   const first = candidate.trim().charAt(0).toUpperCase();
   return first || "?";
 };
@@ -74,7 +95,9 @@ export const TabFavicon: React.FC<ITabFaviconProps> = ({
   }
 
   const letter = initials(pageUrl, title);
-  const bgClass = bgClassFor(displayHost(pageUrl) ?? title ?? letter);
+  const host = hostnameFromUrl(pageUrl);
+  // One colour per site, so every tab from the same site looks the same.
+  const bgClass = bgClassFor((host && siteName(host)) || title || letter);
   return (
     <div
       className={`flex h-8 w-8 min-h-8 min-w-8 items-center justify-center rounded-xl ${bgClass} text-[11px] font-semibold`}
