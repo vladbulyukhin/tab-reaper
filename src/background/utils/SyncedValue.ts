@@ -27,16 +27,25 @@ export class SyncedValue<T> {
     );
   }
 
-  public async get(): Promise<T> {
+  public get(): Promise<T> {
+    return this.load(false);
+  }
+
+  // Updates read storage, not the cache: another context may have written
+  // since, with its change event still in flight.
+  private async load(fresh: boolean): Promise<T> {
+    const read = <V>(value: PersistedValue<V>) =>
+      fresh ? value.readFresh() : value.read();
     if (!this.localIsAuthoritative) {
-      const authority = await this.authority.read();
+      const authority = await read(this.authority);
       this.localIsAuthoritative = authority.isValid && authority.value === true;
     }
-    if (this.localIsAuthoritative) return this.readLocal(false, true, false);
+    if (this.localIsAuthoritative)
+      return this.readLocal(false, true, false, fresh);
 
     let missingSync = false;
     try {
-      const sync = await this.sync.read();
+      const sync = await read(this.sync);
       const value = sync.isValid ? this.validate(sync.value) : null;
       if (sync.hasStoredValue && value !== null) return value;
       missingSync = !sync.hasStoredValue;
@@ -44,12 +53,12 @@ export class SyncedValue<T> {
       // A valid local copy can still be used, but an unreadable sync store is
       // not evidence that this is a first install with no rules.
     }
-    return this.readLocal(missingSync, false, missingSync);
+    return this.readLocal(missingSync, false, missingSync, fresh);
   }
 
   public update(updater: (current: T) => T): Promise<void> {
     return this.mutations.addTask(async () => {
-      const next = updater(await this.get());
+      const next = updater(await this.load(true));
       if (this.localIsAuthoritative) {
         await this.local.update(() => next);
         try {
@@ -75,8 +84,9 @@ export class SyncedValue<T> {
     migrate: boolean,
     reconcileAuthority: boolean,
     allowMissing: boolean,
+    fresh: boolean,
   ): Promise<T> {
-    const local = await this.local.read();
+    const local = await (fresh ? this.local.readFresh() : this.local.read());
     const value = local.isValid ? this.validate(local.value) : null;
     if (!local.hasStoredValue || value === null) {
       if (this.blockUnknown && (local.hasStoredValue || !allowMissing)) {

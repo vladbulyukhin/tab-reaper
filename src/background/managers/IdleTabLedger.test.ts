@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { IBrowserStorageAPI } from "../../api/IBrowserApiProvider";
+import { createSharedStorage } from "../utils/SharedStorageDouble";
 import { IdleTabLedger, savedKeepLifetimeMs } from "./IdleTabLedger";
 
 type StorageDouble = IBrowserStorageAPI & {
@@ -516,5 +517,27 @@ describe("IdleTabLedger", () => {
     await expect(ledger.isKept(71, "https://after.example/")).resolves.toBe(
       true,
     );
+  });
+
+  it("keeps another context's Keep when its change event arrives late", async () => {
+    const shared = createSharedStorage();
+    const firstStorage = shared.context();
+    const first = new IdleTabLedger(firstStorage);
+    const tabs = [
+      tab(81, "https://one.example/"),
+      tab(82, "https://two.example/", 1),
+    ];
+    await first.reconcile(tabs);
+    await first.setKept(81, true);
+
+    const second = new IdleTabLedger(shared.context());
+    await second.setKept(82, true);
+    await first.markInactive(81);
+    firstStorage.deliver();
+
+    const fresh = new IdleTabLedger(shared.context());
+    await expect(fresh.isKept(81)).resolves.toBe(true);
+    await expect(fresh.isKept(82)).resolves.toBe(true);
+    await expect(first.isKept(82)).resolves.toBe(true);
   });
 });

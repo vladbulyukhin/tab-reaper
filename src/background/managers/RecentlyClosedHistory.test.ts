@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { IBrowserStorageAPI } from "../../api/IBrowserApiProvider";
+import { createSharedStorage } from "../utils/SharedStorageDouble";
 import { RecentlyClosedHistory } from "./RecentlyClosedHistory";
 
 const storage = (): IBrowserStorageAPI => {
@@ -97,6 +98,35 @@ describe("recent history and unread activity", () => {
       async () => true,
     );
     await restarted.append(entry(2));
+    expect((await restarted.get()).map((tab) => tab.id)).toEqual([2, 1]);
+  });
+
+  it("keeps closures recorded by another context before its change events arrive", async () => {
+    const session = createSharedStorage();
+    const local = createSharedStorage();
+    const first = new RecentlyClosedHistory(
+      session.context(),
+      local.context(),
+      async () => true,
+    );
+    const second = new RecentlyClosedHistory(
+      session.context(),
+      local.context(),
+      async () => true,
+    );
+
+    await expect(first.get()).resolves.toEqual([]);
+    await expect(first.unread()).resolves.toBe(0);
+    await second.append(entry(1));
+    await first.append(entry(2));
+
+    expect((await first.get()).map((tab) => tab.id)).toEqual([2, 1]);
+    await expect(first.unread()).resolves.toBe(2);
+    const restarted = new RecentlyClosedHistory(
+      createSharedStorage().context(),
+      local.context(),
+      async () => true,
+    );
     expect((await restarted.get()).map((tab) => tab.id)).toEqual([2, 1]);
   });
 });

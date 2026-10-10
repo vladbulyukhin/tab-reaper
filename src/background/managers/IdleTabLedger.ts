@@ -114,8 +114,8 @@ const refreshSafetyHolds = (state: IdleTabLedgerState) => {
   return state;
 };
 
-// Every ledger over the same storage area shares one parsed copy and one write
-// queue. Writes from elsewhere (another context, tests) invalidate it.
+// Every ledger over the same storage area shares one parsed copy for reads and
+// one write queue. Change events only invalidate it; they never supply data.
 type LedgerCache = {
   generation: number;
   loading: Promise<IdleTabLedgerState> | null;
@@ -675,15 +675,29 @@ export class IdleTabLedger {
     return state;
   }
 
-  // Updaters receive a private copy; the result becomes the shared state and
-  // is only written when it differs from what storage already holds.
-  private async write(state: IdleTabLedgerState): Promise<void> {
+  // Updaters receive a fresh copy read from storage, never the shared cache:
+  // another context may have written since, with its change event still in
+  // flight. The result is only written when it differs from what was read.
+  private async write(
+    state: IdleTabLedgerState,
+    stored: string | null,
+  ): Promise<void> {
+    const cache = this.cache;
     const serialized = JSON.stringify(state);
-    if (serialized !== this.cache.written) {
+    // Loads that started before this write must not restore older data.
+    const generation = ++cache.generation;
+    cache.loading = null;
+    if (serialized !== stored) {
+      cache.written = serialized;
       await this.storage.set({ [storageKey]: state });
     }
-    this.cache.state = state;
-    this.cache.written = serialized;
+    if (generation === cache.generation) {
+      cache.state = state;
+      cache.written = serialized;
+    } else {
+      cache.state = null;
+      cache.written = null;
+    }
   }
 
   private async updateState(
@@ -692,9 +706,9 @@ export class IdleTabLedger {
     ) => Promise<IdleTabLedgerState> | IdleTabLedgerState,
   ): Promise<IdleTabLedgerState> {
     return await this.cache.updates.addTask(async () => {
-      const current = structuredClone(await this.load());
-      const state = refreshSafetyHolds(await updater(current));
-      await this.write(state);
+      const loaded = await this.loadFromStorage();
+      const state = refreshSafetyHolds(await updater(loaded.state));
+      await this.write(state, loaded.written);
       return state;
     });
   }
@@ -708,8 +722,9 @@ export class IdleTabLedger {
         },
   ): Promise<T> {
     return await this.cache.updates.addTask(async () => {
-      const updated = await updater(structuredClone(await this.load()));
-      await this.write(refreshSafetyHolds(updated.state));
+      const loaded = await this.loadFromStorage();
+      const updated = await updater(loaded.state);
+      await this.write(refreshSafetyHolds(updated.state), loaded.written);
       return updated.result;
     });
   }

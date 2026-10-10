@@ -12,7 +12,8 @@ export interface PersistedValueReadResult<T> {
 
 export class PersistedValue<T> {
   private cachedResult: PersistedValueReadResult<T> | null = null;
-  // Storage events advance this generation so an old read cannot replace them.
+  // Storage events and writes advance this generation so an old read cannot
+  // replace them.
   private cacheGeneration = 0;
   private updateQueue = new SequentialTaskQueue();
 
@@ -47,12 +48,20 @@ export class PersistedValue<T> {
     return this.cachedResult;
   }
 
+  // Bypasses the cache: another context may have written since it was filled,
+  // and its change event can arrive late. Read-modify-write callers use this.
+  public async readFresh(): Promise<PersistedValueReadResult<T>> {
+    this.invalidate();
+    return await this.read();
+  }
+
   public async update(updater: (currentValue: T) => T): Promise<T> {
     // Serialize writes so each updater starts from the most recently saved value.
     return await this.updateQueue.addTask(async () => {
-      const currentValue = await this.get();
+      const currentValue = (await this.readFresh()).value;
       const updatedValue = updater(currentValue);
-      const cacheGeneration = this.cacheGeneration;
+      // Reads that started before this write must not restore older data.
+      const cacheGeneration = ++this.cacheGeneration;
       await this.browserStorageApi.set({
         [this.storageKey]: this.serialize(updatedValue),
       });
@@ -62,6 +71,8 @@ export class PersistedValue<T> {
           isValid: true,
           value: updatedValue,
         };
+      } else {
+        this.invalidate();
       }
 
       return updatedValue;
@@ -71,8 +82,7 @@ export class PersistedValue<T> {
   public async remove(): Promise<void> {
     await this.updateQueue.addTask(async () => {
       await this.browserStorageApi.remove(this.storageKey);
-      this.cacheGeneration++;
-      this.cachedResult = null;
+      this.invalidate();
     });
   }
 
@@ -102,19 +112,16 @@ export class PersistedValue<T> {
     }
   }
 
+  private invalidate(): void {
+    this.cacheGeneration++;
+    this.cachedResult = null;
+  }
+
+  // Only invalidate: an event can describe a write older than what storage
+  // now holds, so its value must never replace the cache.
   private handleStorageChanged(changes: {
     [key: string]: chrome.storage.StorageChange;
   }): void {
-    if (!(this.storageKey in changes)) return;
-
-    this.cacheGeneration++;
-    if (changes[this.storageKey].newValue === undefined) {
-      this.cachedResult = null;
-      return;
-    }
-
-    this.cachedResult = this.parseStoredValue(
-      changes[this.storageKey].newValue,
-    );
+    if (this.storageKey in changes) this.invalidate();
   }
 }

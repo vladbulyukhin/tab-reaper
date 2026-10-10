@@ -40,6 +40,16 @@ const queueOf = (entries: RemovedTab[]) => {
   for (const entry of entries) queue.enqueue(entry);
   return queue;
 };
+// Another context can write history at any time, so writes merge into what
+// storage holds instead of replacing it with this context's copy.
+const merge = (...sources: RemovedTab[][]) =>
+  queueOf(
+    [
+      ...new Map(
+        sources.flat().map((entry) => [entryKey(entry), entry]),
+      ).values(),
+    ].sort((a, b) => Date.parse(a.removedAt) - Date.parse(b.removedAt)),
+  );
 type Activity = { total: number; seen: number };
 const readActivity = (data: unknown): Activity => {
   const value = typeof data === "string" ? JSON.parse(data) : data;
@@ -93,27 +103,21 @@ export class RecentlyClosedHistory {
   }
 
   private async hydrate(): Promise<CircularQueue<RemovedTab>> {
-    const session = await this.session.get();
+    const session = (await this.session.readFresh()).value;
     if (!(await this.remember())) {
       await this.local.remove();
       return session;
     }
-    const saved = await this.local.get();
-    const unique = new Map(
-      [...saved.toArray(), ...session.toArray()].map((entry) => [
-        entryKey(entry),
-        entry,
-      ]),
-    );
-    const queue = queueOf(
-      [...unique.values()].sort(
-        (a, b) => Date.parse(a.removedAt) - Date.parse(b.removedAt),
-      ),
-    );
+    const saved = (await this.local.readFresh()).value;
+    const queue = merge(saved.toArray(), session.toArray());
     if (queue.toJSON() !== queueOf(session.toArray()).toJSON())
-      await this.session.update(() => queueOf(queue.toArray()));
+      await this.session.update((current) =>
+        merge(current.toArray(), queue.toArray()),
+      );
     if (queue.toJSON() !== queueOf(saved.toArray()).toJSON())
-      await this.local.update(() => queueOf(queue.toArray()));
+      await this.local.update((current) =>
+        merge(current.toArray(), queue.toArray()),
+      );
     return queue;
   }
 
@@ -133,11 +137,14 @@ export class RecentlyClosedHistory {
         total: total + 1,
         seen,
       }));
-      const queue = await this.hydrate();
-      queue.enqueue(entry);
-      await this.session.update(() => queueOf(queue.toArray()));
+      await this.hydrate();
+      const queue = await this.session.update((current) =>
+        merge(current.toArray(), [entry]),
+      );
       if (await this.remember())
-        await this.local.update(() => queueOf(queue.toArray()));
+        await this.local.update((current) =>
+          merge(current.toArray(), queue.toArray()),
+        );
       return activity.total - activity.seen;
     });
   }
