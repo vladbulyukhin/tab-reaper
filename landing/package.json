@@ -10,9 +10,6 @@
     "deploy": "gh-pages -d dist"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4.1.5",
-    "@tailwindcss/vite": "^4.1.5",
-    "tailwindcss": "^4.1.5",
     "typescript": "~5.8.3",
     "vite": "^6.3.5"
   }

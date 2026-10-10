@@ -3,21 +3,24 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#ffffff" />
-    <link rel="icon" href="/logo.png" />
+    <meta name="theme-color" content="#fbfaf7" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0f1114" media="(prefers-color-scheme: dark)" />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <title>Tab Reaper — Keep what matters. Reap the rest.</title>
-    <meta name="description" content="Tab Reaper quietly removes duplicate and inactive tabs while protecting the tabs that matter." />
+    <meta name="description" content="Tab Reaper closes duplicate and forgotten tabs on your schedule, and keeps the ones you care about. For Safari and Chrome." />
     <meta property="og:title" content="Tab Reaper — Keep what matters. Reap the rest." />
-    <meta property="og:description" content="A quieter, lighter browser for Chrome and Safari." />
+    <meta property="og:description" content="A browser extension that closes duplicate and forgotten tabs on your schedule. For Safari and Chrome." />
     <meta property="og:image" content="https://vladbulyukhin.github.io/tab-reaper/social.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Tab Reaper: Keep what matters. Reap the rest. Duplicate and idle tabs falling out of a browser window." />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://vladbulyukhin.github.io/tab-reaper/" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:image" content="https://vladbulyukhin.github.io/tab-reaper/social.png" />
     <link rel="canonical" href="https://vladbulyukhin.github.io/tab-reaper/" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="/src/style.css" />
   </head>
   <body>
@@ -25,74 +28,201 @@
     <nav class="site-nav" aria-label="Main navigation">
       <a class="brand" href="#top" aria-label="Tab Reaper home"><img src="/logo.png" alt="" /><span>Tab Reaper</span></a>
       <div class="nav-links">
-        <a href="https://github.com/vladbulyukhin/tab-reaper" target="_blank" rel="noreferrer">GitHub <span>↗</span></a>
-        <a href="https://chromewebstore.google.com/detail/lpdcbkckljbnkjbajmjhehdilncjjgii" target="_blank" rel="noreferrer">Chrome <span>↗</span></a>
-        <a href="#install">Safari <span>↗</span></a>
+        <a href="#how-it-works">How it works</a>
+        <a href="#get">Download</a>
+        <a href="#privacy">Privacy</a>
+        <a href="https://github.com/vladbulyukhin/tab-reaper" target="_blank" rel="noreferrer">GitHub <span aria-hidden="true">↗</span></a>
       </div>
-      <div class="mobile-controls">
-        <a class="mobile-install" href="#install"><span class="mobile-install-label">Install</span> <span>↗</span></a>
-        <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="mobile-menu" aria-label="Open menu">☰</button>
+      <div class="nav-actions">
+        <a class="button primary small" data-install="nav" href="https://chromewebstore.google.com/detail/lpdcbkckljbnkjbajmjhehdilncjjgii" target="_blank" rel="noreferrer">Add to Chrome</a>
+        <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="mobile-menu" aria-label="Open menu"><span aria-hidden="true"></span></button>
       </div>
       <div class="mobile-menu" id="mobile-menu" hidden>
+        <a href="#how-it-works">How it works</a>
+        <a href="#get">Download</a>
+        <a href="#privacy">Privacy</a>
         <a href="https://github.com/vladbulyukhin/tab-reaper" target="_blank" rel="noreferrer">GitHub ↗</a>
-        <a href="https://chromewebstore.google.com/detail/lpdcbkckljbnkjbajmjhehdilncjjgii" target="_blank" rel="noreferrer">Chrome ↗</a>
-        <a href="#install">Safari ↗</a>
       </div>
     </nav>
 
     <main id="main-content">
-      <header class="hero atmospheric" id="top">
-        <div class="ambient-tabs" data-ambient="hero" aria-hidden="true"></div>
-        <div class="hero-content">
-          <p class="eyebrow">A little less tab. A lot more focus.</p>
+      <header class="hero" id="top">
+        <div class="hero-copy">
+          <p class="eyebrow">Tab cleanup for Safari &amp; Chrome</p>
           <h1>Keep what matters.<br /><em>Reap the rest.</em></h1>
-          <p class="hero-copy">A browser extension that closes duplicate and inactive tabs on your schedule. You choose what stays.</p>
-          <div class="hero-actions">
-            <a class="button primary chrome-link" href="https://chromewebstore.google.com/detail/lpdcbkckljbnkjbajmjhehdilncjjgii" target="_blank" rel="noreferrer"><svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.5"/><path d="M12 8.5h8M9 14l-4-7m9 8-4 6"/></svg><span>Add to Chrome</span> ↗</a>
-            <a class="button secondary safari-link" href="#safari-release"><svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m16 8-3 5-5 3 3-5Z"/></svg><span>Safari · coming soon</span></a>
-            <a class="source-link" href="https://github.com/vladbulyukhin/tab-reaper" target="_blank" rel="noreferrer">View the source ↗</a>
+          <p class="lede">Tab Reaper closes duplicate and forgotten tabs on your schedule. The ones you care about stay right where they are.</p>
+          <div class="cta-group" data-cta>
+            <a class="button primary" data-cta-chrome href="https://chromewebstore.google.com/detail/lpdcbkckljbnkjbajmjhehdilncjjgii" target="_blank" rel="noreferrer"><svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.5"/><path d="M12 8.5h8M9 14l-4-7m9 8-4 6"/></svg><span>Add to Chrome</span></a>
+            <a class="button secondary" data-cta-safari href="#get"><svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m16 8-3 5-5 3 3-5Z"/></svg><span>Safari · coming soon</span></a>
           </div>
-          <ul class="promises" aria-label="Product qualities"><li>Automatic cleanup</li><li>Your rules</li><li>Reopen closed tabs</li></ul>
-          <p class="platforms">Chrome · Safari on Mac, iPhone &amp; iPad</p>
+          <ul class="proof" aria-label="Highlights">
+            <li><span class="stars" aria-hidden="true">★★★★★</span> Rated 5.0</li>
+            <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9Z"/></svg> Featured on the Chrome Web Store</li>
+            <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6Z"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg> No tracking, no account</li>
+          </ul>
+        </div>
+
+        <div class="demo" data-demo>
+          <div class="window" role="group" aria-label="Interactive demo: a browser window where Tab Reaper closes idle and duplicate tabs">
+            <div class="window-bar">
+              <span class="traffic" aria-hidden="true"><i></i><i></i><i></i></span>
+              <div class="tabstrip" data-strip></div>
+              <button class="new-tab-button" type="button" data-new-tab aria-label="Open a new tab">+</button>
+              <button class="reaper-button" type="button" data-popup-toggle aria-expanded="false" aria-controls="demo-popup" aria-label="Open Tab Reaper">
+                <img src="/logo.png" alt="" /><span class="badge" data-badge hidden></span>
+              </button>
+            </div>
+            <div class="window-page" data-page aria-live="polite">
+              <div class="page-inner">
+                <p class="page-host" data-page-host>docs.example.com</p>
+                <p class="page-title" data-page-title>Project plan</p>
+                <div class="page-lines" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+              </div>
+            </div>
+            <div class="popup rp" id="demo-popup" data-popup hidden>
+              <div class="rp-header">
+                <img src="/logo.png" alt="" />
+                <div class="rp-title"><strong>Tab Reaper</strong><small>Quiet tab cleanup for focused browsing</small></div>
+                <button type="button" class="rp-button" data-pause aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>Pause</span></button>
+                <span class="rp-button rp-icon" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg></span>
+              </div>
+              <div class="rp-body">
+                <section class="rp-card" aria-label="Current tab">
+                  <div class="rp-current">
+                    <div><p class="rp-eyebrow">Current tab</p><p class="rp-host" data-current-host>docs.example.com</p></div>
+                    <span class="rp-status" data-current-status data-tone="kept">Tab kept</span>
+                  </div>
+                  <label class="rp-setting"><span><strong>Keep this tab</strong><small data-keep-copy>Skip only this tab. Other tabs from docs.example.com can still be cleaned up.</small></span><input type="checkbox" class="switch" data-keep-switch /></label>
+                  <label class="rp-setting"><span><strong>Always protect this site</strong><small data-site-copy>Keep every tab from docs.example.com until you remove the site from protected sites.</small></span><input type="checkbox" class="switch" data-site-switch /></label>
+                </section>
+                <section class="rp-card rp-closed" aria-label="Recently closed">
+                  <div class="rp-closed-head"><p class="rp-eyebrow">Recently closed</p><span class="rp-count" data-closed-count>0 saved</span></div>
+                  <p class="rp-heading">Recently reaped tabs</p>
+                  <p class="rp-sub">Click a row to reopen a tab that Tab Reaper closed.</p>
+                  <div class="rp-list" data-closed-list><p class="rp-empty" data-closed-empty>All set for now. Tabs you haven't visited in a while will show up here once they are cleaned up.</p></div>
+                </section>
+              </div>
+            </div>
+          </div>
+          <div class="demo-controls">
+            <p data-demo-hint>Try it: open a few tabs with <kbd>+</kbd>, then leave them alone.</p>
+            <button class="text-button" type="button" data-motion-toggle aria-pressed="false">Pause demo</button>
+          </div>
         </div>
       </header>
 
-      <section class="story" id="how-it-works">
-        <div class="section-heading"><div><p class="eyebrow">How it works</p><h2>Less clutter.<br /><em>Same train of thought.</em></h2></div><p>Duplicates go first. Idle tabs follow your schedule. The tabs you protect stay.</p></div>
-        <div class="story-layout">
-          <div class="story-visual" aria-hidden="true"><div class="browser-tabs"><span class="browser-tab protected"><i class="favicon favicon-coral"></i>Project<span class="tab-lock"><svg viewBox="0 0 16 16"><rect x="4" y="7" width="8" height="6" rx="1"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"/></svg></span></span><span class="browser-tab protected"><i class="favicon favicon-sky"></i>Inbox<span class="tab-lock"><svg viewBox="0 0 16 16"><rect x="4" y="7" width="8" height="6" rx="1"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"/></svg></span></span><span class="browser-tab duplicate"><i class="favicon favicon-blue"></i>Docs</span><span class="browser-tab protected"><i class="favicon favicon-blue"></i>Docs<span class="tab-lock"><svg viewBox="0 0 16 16"><rect x="4" y="7" width="8" height="6" rx="1"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"/></svg></span></span><span class="browser-tab idle"><i class="favicon favicon-violet"></i>Read</span><span class="browser-tab idle"><i class="favicon favicon-amber"></i>Shop</span><span class="browser-tab idle"><i class="favicon favicon-green"></i>Recipe</span><span class="browser-tab protected"><i class="favicon favicon-rose"></i>Music<span class="tab-lock"><svg viewBox="0 0 16 16"><rect x="4" y="7" width="8" height="6" rx="1"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"/></svg></span></span><span class="new-tab">+</span></div><p class="visual-caption" data-caption>A little crowded. Nothing unusual.</p><p class="tab-count" data-count>8 open tabs · 4 protected</p></div>
-          <ol class="story-steps">
-            <li data-story-step="0"><span>1</span><div class="step-copy"><h3>Sound familiar?</h3><p>Too many tabs? Start with your browser, just as it is.</p></div><div class="mobile-stage" data-mobile-stage="0"></div></li>
-            <li data-story-step="1"><span>2</span><div class="step-copy"><h3>Once is enough.</h3><p>Repeated pages disappear. One useful copy stays.</p></div><div class="mobile-stage" data-mobile-stage="1"></div></li>
-            <li data-story-step="2"><span>3</span><div class="step-copy"><h3>Room for what matters.</h3><p>Idle tabs fall away on your schedule. Active and protected tabs stay open.</p></div><div class="mobile-stage" data-mobile-stage="2"></div></li>
-          </ol>
+      <section class="pain" aria-labelledby="pain-title">
+        <h2 id="pain-title">You have <span class="count" data-countdown>47</span> tabs open.<br /><em>You need about six.</em></h2>
+        <p>The rest are search results you already read, a second copy of the same doc, and an article from last Tuesday. Tab Reaper takes care of them, so you don’t have to.</p>
+      </section>
+
+      <section class="promises" id="how-it-works" aria-labelledby="how-title">
+        <div class="section-head">
+          <p class="eyebrow">How it works</p>
+          <h2 id="how-title">Set it once. Forget the clutter.</h2>
+        </div>
+        <div class="promise-grid">
+          <article class="promise" data-vignette>
+            <div class="vignette vignette-idle" aria-hidden="true">
+              <span class="v-tab"><i class="fav" style="--fav:#5b8def">D</i>Docs</span>
+              <span class="v-tab v-idle"><i class="fav ring" style="--fav:#a77bd6">A</i>Article</span>
+              <span class="v-tab"><i class="fav" style="--fav:#e0874a">M</i>Mail</span>
+              <span class="v-tag">idle 3 days</span>
+            </div>
+            <h3>It’s automatic.</h3>
+            <p>Choose how long a tab can sit untouched. When time’s up, it’s quietly closed. Duplicates go right away.</p>
+          </article>
+          <article class="promise" data-vignette>
+            <div class="vignette vignette-protect" aria-hidden="true">
+              <span class="v-tab v-locked"><i class="fav" style="--fav:#ff4c4c">P</i>Project<svg viewBox="0 0 16 16"><rect x="4" y="7" width="8" height="6" rx="1"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"/></svg></span>
+              <span class="v-tab v-faller"><i class="fav" style="--fav:#4fae84">S</i>Search</span>
+              <span class="v-tab"><i class="fav" style="--fav:#e0874a">M</i>Music</span>
+              <span class="v-quip">not today.</span>
+            </div>
+            <h3>It knows what to keep.</h3>
+            <p>Protect a tab or a whole site. Pinned, grouped and playing tabs can be left alone too.</p>
+          </article>
+          <article class="promise" data-vignette>
+            <div class="vignette vignette-restore" aria-hidden="true">
+              <p class="v-heading">Recently closed</p>
+              <span class="v-row"><i class="fav" style="--fav:#a77bd6">A</i><span><b>That article from Tuesday</b><small>blog.example.com</small></span><em>2m</em></span>
+              <span class="v-row v-restoring"><i class="fav" style="--fav:#4fae84">S</i><span><b>Sourdough, day 4</b><small>bread.example.com</small></span><em>1h</em></span>
+            </div>
+            <h3>Nothing is gone for good.</h3>
+            <p>Changed your mind? Reopen it from Recently closed with one click.</p>
+          </article>
+        </div>
+        <ul class="also" aria-label="Also included">
+          <li>Pause cleanup any time</li>
+          <li>Timers per window</li>
+          <li>Picks up after a restart</li>
+          <li>No setup required</li>
+        </ul>
+      </section>
+
+      <section class="platforms" id="get" aria-labelledby="get-title">
+        <div class="section-head">
+          <p class="eyebrow">Get Tab Reaper</p>
+          <h2 id="get-title">Your tabs, tidy<br />on every screen.</h2>
+          <p data-platforms-lede>Available now for Chrome on desktop, and coming soon to Safari on Mac, iPhone and iPad. Same rules everywhere.</p>
+        </div>
+        <div class="devices" aria-hidden="true">
+          <div class="device device-mac"><div class="screen"><div class="mini-strip"><i></i><i></i><i></i></div><div class="mini-page"><b></b><i></i><i></i><i></i><i></i><i></i></div></div><div class="base"></div></div>
+          <div class="device device-ipad"><div class="screen"><div class="mini-strip"><i></i><i></i></div><div class="mini-page"><b></b><i></i><i></i><i></i><i></i><i></i></div></div></div>
+          <div class="device device-iphone"><div class="screen"><div class="mini-tabs"><i></i><i></i><i></i><i></i></div></div></div>
+        </div>
+        <div class="platform-cards" data-platform-cards>
+          <article class="platform-card is-live" data-platform="chrome">
+            <p class="platform-status"><span class="status-dot" aria-hidden="true"></span>Available now · Featured · <span class="stars" aria-hidden="true">★</span> 5.0</p>
+            <h3>Chrome</h3>
+            <p>Windows, macOS, Linux and ChromeOS.</p>
+            <a class="button primary small" href="https://chromewebstore.google.com/detail/lpdcbkckljbnkjbajmjhehdilncjjgii" target="_blank" rel="noreferrer">Add to Chrome ↗</a>
+          </article>
+          <article class="platform-card" data-platform="safari">
+            <p class="platform-status"><span class="status-dot" aria-hidden="true"></span><span data-safari-status>Coming soon</span></p>
+            <h3>Safari</h3>
+            <p>Mac, iPhone and iPad.</p>
+            <span class="platform-soon" data-safari-card-link>Coming soon to the App Store</span>
+          </article>
+        </div>
+        <p class="setup-link">Set up in under a minute. <a href="./support.html#install">See how →</a></p>
+      </section>
+
+      <section class="privacy" id="privacy" aria-labelledby="privacy-title">
+        <div class="privacy-inner">
+          <div>
+            <p class="eyebrow">Private by design</p>
+            <h2 id="privacy-title">Your tabs are<br />your business.</h2>
+          </div>
+          <ul class="facts">
+            <li><strong>Runs on your device.</strong> We don’t receive your browsing history. There’s no server to send it to.</li>
+            <li><strong>No account.</strong> Your browser may sync your preferences through its own account, and that’s it.</li>
+            <li><strong>No ads, no analytics.</strong> Nothing tracks what you open or close.</li>
+            <li><strong>Open source.</strong> Read every line on <a href="https://github.com/vladbulyukhin/tab-reaper" target="_blank" rel="noreferrer">GitHub ↗</a></li>
+          </ul>
+          <a class="privacy-link" href="./privacy.html">Read the privacy policy →</a>
         </div>
       </section>
 
-      <section class="features" id="controls">
-        <div class="feature-intro"><p class="eyebrow">Small tool. Thoughtful rules.</p><h2>A lighter browser.<br /><em>Not a blank slate.</em></h2><p>Just enough automation to make space. Just enough control to keep it yours.</p></div>
-        <div class="feature-list">
-          <article><svg class="feature-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><div><h3>Idle cleanup</h3><p>Choose how long inactive tabs stay open. The idle threshold applies separately to each browser window.</p></div></article>
-          <article><svg class="feature-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 4H6a2 2 0 0 0-2 2v10"/></svg><div><h3>Duplicate removal</h3><p>Keep one useful copy. Remove repeated pages without waiting for the idle threshold.</p></div></article>
-          <article><svg class="feature-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6Z"/><path d="m8 12 3 3 5-6"/></svg><div><h3>Protected tabs and sites</h3><p>Keep one tab, or protect a whole site. Choose how pinned, grouped and audible tabs are treated.</p></div></article>
-          <article><svg class="feature-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg><div><h3>Pause controls</h3><p>In the middle of something? Pause cleanup and resume when you’re ready.</p></div></article>
-          <article><svg class="feature-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10a9 9 0 1 1 1 7M3 4v6h6M12 7v5l3 2"/></svg><div><h3>Recently closed recovery</h3><p>Reopen a URL from your recently closed list. Remembering the list across restarts is optional; unsaved page edits aren’t restored.</p></div></article>
-          <article><svg class="feature-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4Z"/><path d="M4 9h16m-9-4v14"/></svg><div><h3>Restart-aware timers</h3><p>Saved timing and protection state helps newer versions resume cleanup after browser restarts. On iOS, cleanup can catch up when Safari returns.</p></div></article>
+      <section class="final-cta" id="install" aria-labelledby="final-title">
+        <div class="calm-strip" data-calm aria-hidden="true">
+          <span class="v-tab v-locked"><i class="fav" style="--fav:#ff4c4c">P</i>Project<svg viewBox="0 0 16 16"><rect x="4" y="7" width="8" height="6" rx="1"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"/></svg></span>
+          <span class="v-tab"><i class="fav" style="--fav:#e0874a">M</i>Mail</span>
+          <span class="v-tab"><i class="fav" style="--fav:#5b8def">D</i>Docs</span>
         </div>
-      </section>
-
-      <section class="privacy" id="privacy">
-        <div><p class="eyebrow">Private by design</p><h2>Your tabs are your business.</h2></div>
-        <div class="privacy-copy"><svg class="feature-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6Z"/><path d="m8 12 3 3 5-6"/></svg><p>Tab cleanup runs on your device. We don’t receive your browsing history.</p><small>No Tab Reaper account. Your browser may sync preferences and protected sites through its own account service.</small><a href="./privacy.html">Read our privacy policy ↗</a></div>
-      </section>
-
-      <section class="final-cta atmospheric" id="install">
-        <div class="ambient-tabs" data-ambient="footer" aria-hidden="true"></div>
-        <div class="cta-content"><p class="eyebrow">Make a little room</p><h2>Your next good idea<br /><em>needs some space.</em></h2><p>Keep the tabs you love. Let Tab Reaper handle the rest.</p><div class="cta-actions"><a class="button primary chrome-link" href="https://chromewebstore.google.com/detail/lpdcbkckljbnkjbajmjhehdilncjjgii" target="_blank" rel="noreferrer"><svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.5"/><path d="M12 8.5h8M9 14l-4-7m9 8-4 6"/></svg><span>Add to Chrome</span> ↗</a></div><small id="safari-release">Available for Chrome on desktop.<br />Coming soon to Safari on Mac, iPhone and iPad.</small></div>
+        <h2 id="final-title">Your next good idea<br /><em>needs some space.</em></h2>
+        <p>Keep the tabs you love. Let Tab Reaper handle the rest.</p>
+        <div class="cta-group" data-cta>
+          <a class="button primary" data-cta-chrome href="https://chromewebstore.google.com/detail/lpdcbkckljbnkjbajmjhehdilncjjgii" target="_blank" rel="noreferrer"><svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.5"/><path d="M12 8.5h8M9 14l-4-7m9 8-4 6"/></svg><span>Add to Chrome</span></a>
+          <a class="button secondary" data-cta-safari href="#get"><svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m16 8-3 5-5 3 3-5Z"/></svg><span>Safari · coming soon</span></a>
+        </div>
       </section>
     </main>
 
-    <footer><span><img src="/logo.png" alt="" /> Tab Reaper · Less clutter. More you.</span><nav aria-label="Footer"><button class="motion-toggle" type="button" aria-pressed="false">Pause background animation</button><a href="./support.html">Support</a><a href="./privacy.html">Privacy</a><a href="./terms.html">Terms</a><a href="https://github.com/vladbulyukhin/tab-reaper">Source ↗</a><span>© Vladislav Bulyukhin</span></nav></footer>
+    <footer>
+      <span class="footer-brand"><img src="/logo.png" alt="" /> Tab Reaper · Less clutter. More you.</span>
+      <nav aria-label="Footer"><a href="./support.html">Support</a><a href="./privacy.html">Privacy</a><a href="./terms.html">Terms</a><a href="https://github.com/vladbulyukhin/tab-reaper" target="_blank" rel="noreferrer">Source ↗</a><span>© Vladislav Bulyukhin</span></nav>
+    </footer>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

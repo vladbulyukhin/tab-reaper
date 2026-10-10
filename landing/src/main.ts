@@ -1,195 +1,177 @@
-const ambientCards = [
-  ["That search again", "google.com · duplicate"],
-  ["Read this later", "An article from last Tuesday"],
-  ["Just browsing…", "tab.example · idle"],
-  ["Another documentation tab", "docs.example · idle"],
-  ["The perfect sourdough", "Saved for someday"],
-  ["Window shopping", "This one can go"],
-  ["Yesterday’s rabbit hole", "Recently closed · recoverable"],
-  ["Someday, maybe", "One less open loop"],
-] as const;
+import { TabDemo, dropElement } from "./demo";
 
+const CHROME_URL = "https://chromewebstore.google.com/detail/lpdcbkckljbnkjbajmjhehdilncjjgii";
+// Set to the App Store listing once the Safari version ships; every Safari CTA switches over.
+const SAFARI_URL = "";
 
-const ambientFaviconColors = ["#d96868", "#6f9bad", "#718eaf", "#8b7fa7", "#ad9564", "#719783", "#ae707c"];
-
-let spawnId = 0;
-
-class AmbientTabLoop {
-  private readonly cards = new Set<HTMLElement>();
-  private readonly container: HTMLElement;
-  private timer: ReturnType<typeof setInterval> | undefined;
-
-  constructor(container: HTMLElement) {
-    this.container = container;
-  }
-
-  private spawn(progress = 0) {
-    if (this.cards.size >= 6) return;
-    const templateIndex = Math.floor(Math.random() * ambientCards.length);
-    const [title, detail] = ambientCards[templateIndex];
-    const card = document.createElement("span");
-    const duration = 4.8 + Math.random() * 1.8;
-    const left = Math.random() < 0.5 ? 1 + Math.random() * 10 : 84 + Math.random() * 10;
-    card.className = "ambient-tab is-falling";
-    card.dataset.spawnId = String(++spawnId);
-    card.style.setProperty("--fall-left", `${left}%`);
-    card.style.setProperty("--fall-rotation", `${-10 + Math.random() * 20}deg`);
-    card.style.setProperty("--fall-drift", `${-45 + Math.random() * 90}px`);
-    card.style.setProperty("--fall-duration", `${duration}s`);
-    card.style.setProperty("--fall-distance", `${this.container.clientHeight + 160}px`);
-    card.style.setProperty("--static-top", `${8 + progress * 78}%`);
-    card.style.setProperty("--favicon-color", ambientFaviconColors[templateIndex % ambientFaviconColors.length]);
-    card.style.animationDelay = `${-progress * duration}s`;
-    card.innerHTML = `<strong>${title}</strong><small>${detail}</small>`;
-    card.addEventListener("animationend", () => {
-      this.cards.delete(card);
-      card.remove();
-    }, { once: true });
-    this.cards.add(card);
-    this.container.append(card);
-  }
-
-  start() {
-    if (this.timer) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      if (!this.cards.size) for (let index = 0; index < 4; index++) this.spawn(index / 5);
-      return;
-    }
-    if (!this.cards.size) for (let index = 0; index < 5; index++) this.spawn(index / 5);
-    this.container.classList.remove("is-paused");
-    this.timer = setInterval(() => this.spawn(), 950);
-  }
-
-  pause() {
-    if (this.timer) clearInterval(this.timer);
-    this.timer = undefined;
-    this.container.classList.add("is-paused");
-  }
-}
-
-const ambientLoops = new Map([...document.querySelectorAll<HTMLElement>("[data-ambient]")].map((container) => [container, new AmbientTabLoop(container)]));
-const visibleAmbient = new Set<Element>();
-let motionPaused = false;
-const updateAmbient = () => {
-  for (const [container, loop] of ambientLoops) {
-    if (visibleAmbient.has(container) && !document.hidden && !motionPaused) loop.start();
-    else loop.pause();
-  }
-};
-const ambientObserver = new IntersectionObserver((entries) => {
-  for (const entry of entries) {
-    if (entry.isIntersecting) visibleAmbient.add(entry.target);
-    else visibleAmbient.delete(entry.target);
-  }
-  updateAmbient();
-});
-for (const container of ambientLoops.keys()) ambientObserver.observe(container);
-document.addEventListener("visibilitychange", updateAmbient);
-window.addEventListener("pageshow", updateAmbient);
-const motionToggles = document.querySelectorAll<HTMLButtonElement>(".motion-toggle");
-for (const motionToggle of motionToggles) motionToggle.addEventListener("click", () => {
-  motionPaused = !motionPaused;
-  for (const toggle of motionToggles) {
-    toggle.setAttribute("aria-pressed", String(motionPaused));
-    toggle.textContent = motionPaused ? "Resume background animation" : "Pause background animation";
-  }
-  updateAmbient();
-});
-
-const story = document.querySelector<HTMLElement>(".story");
-const caption = document.querySelector<HTMLElement>("[data-caption]");
-const count = document.querySelector<HTMLElement>("[data-count]");
-const steps = [...document.querySelectorAll<HTMLElement>("[data-story-step]")];
-const stageCopy = [
-  ["A little crowded. Nothing unusual.", "8 open tabs · 4 protected"],
-  ["One Docs copy stays. The duplicate goes.", "7 open tabs · 4 protected"],
-  ["Idle tabs are gone. Your protected tabs remain.", "4 open tabs · 4 protected"],
-] as const;
-let currentStage = -1;
-function setStage(nextStage: number) {
-  if (!story || !caption || !count || nextStage === currentStage) return;
-  currentStage = nextStage;
-  story.dataset.stage = String(nextStage);
-  caption.textContent = stageCopy[nextStage][0];
-  count.textContent = stageCopy[nextStage][1];
-  for (const [index, step] of steps.entries()) step.classList.toggle("is-active", index === nextStage);
-}
-setStage(0);
-let scrollFrame = 0;
-function updateScrollStory() {
-  scrollFrame = 0;
-  if (!steps.length || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-  let nearest = 0;
-  let distance = Infinity;
-  for (const [index, step] of steps.entries()) {
-    const bounds = step.getBoundingClientRect();
-    const nextDistance = Math.abs(bounds.top + bounds.height / 2 - innerHeight / 2);
-    if (nextDistance < distance) { nearest = index; distance = nextDistance; }
-  }
-  setStage(nearest);
-}
-function queueScrollStory() {
-  if (!scrollFrame) scrollFrame = requestAnimationFrame(updateScrollStory);
-}
-window.addEventListener("scroll", queueScrollStory, { passive: true });
-window.addEventListener("resize", queueScrollStory);
-queueScrollStory();
-
-const mobileStages = [
-  ["Project", "Inbox", "Docs", "Docs", "Read", "Shop", "Recipe", "Music"],
-  ["Project", "Inbox", "Docs", "Read", "Shop", "Recipe", "Music"],
-  ["Project", "Inbox", "Docs", "Music"],
-];
-const tabColors: Record<string, string> = { Project: "coral", Inbox: "sky", Docs: "blue", Read: "violet", Shop: "amber", Recipe: "green", Music: "rose" };
-for (const [index, titles] of mobileStages.entries()) {
-  const stage = document.querySelector<HTMLElement>(`[data-mobile-stage="${index}"]`);
-  if (stage) stage.innerHTML = `<div class="browser-tabs" aria-hidden="true">${titles.map(title => `<span class="browser-tab"><i class="favicon favicon-${tabColors[title]}"></i>${title}</span>`).join("")}<span class="new-tab">+</span></div><small>${stageCopy[index][1]}</small>`;
-}
-
-const isAppleMobile = /iPhone|iPad|iPod/.test(navigator.userAgent);
-const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome|Chromium|CriOS|Edg/.test(navigator.userAgent);
+const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const isAppleMobile = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome|Chromium|CriOS|Edg|FxiOS|Firefox/.test(navigator.userAgent);
 const prefersSafari = isAppleMobile || isSafari;
 
-const mobileInstallLabel = document.querySelector<HTMLElement>(".mobile-install-label");
-if (mobileInstallLabel) mobileInstallLabel.textContent = prefersSafari ? "Safari · soon" : "Chrome";
-const mobileInstall = document.querySelector<HTMLAnchorElement>(".mobile-install");
-if (mobileInstall) mobileInstall.href = prefersSafari ? "#safari-release" : "#install";
+// Calls to action: lead with the visitor's own browser.
+for (const group of document.querySelectorAll<HTMLElement>("[data-cta]")) {
+  const chrome = group.querySelector<HTMLAnchorElement>("[data-cta-chrome]");
+  const safari = group.querySelector<HTMLAnchorElement>("[data-cta-safari]");
+  if (!chrome || !safari) continue;
+  if (SAFARI_URL) {
+    safari.href = SAFARI_URL;
+    safari.target = "_blank";
+    safari.rel = "noreferrer";
+    safari.querySelector("span")!.textContent = "Get it for Safari";
+  }
+  if (prefersSafari) {
+    group.prepend(safari);
+    safari.classList.replace("secondary", "primary");
+    chrome.classList.replace("primary", "secondary");
+    if (!SAFARI_URL) safari.querySelector("span")!.textContent = "Coming soon to Safari";
+  }
+}
+const navInstall = document.querySelector<HTMLAnchorElement>('[data-install="nav"]');
+if (navInstall && prefersSafari) {
+  navInstall.href = SAFARI_URL || "#get";
+  navInstall.textContent = SAFARI_URL ? "Get for Safari" : "Safari · soon";
+  if (!SAFARI_URL) navInstall.removeAttribute("target");
+} else if (navInstall) {
+  navInstall.href = CHROME_URL;
+}
 
-const menuToggle = document.querySelector<HTMLButtonElement>(".menu-toggle");
-const mobileMenu = document.querySelector<HTMLElement>(".mobile-menu");
-menuToggle?.addEventListener("click", () => {
-  const menu = mobileMenu;
-  if (!menu) return;
-  const willOpen = menu.hidden;
-  menu.hidden = !willOpen;
-  menuToggle.setAttribute("aria-expanded", String(willOpen));
-  menuToggle.setAttribute("aria-label", willOpen ? "Close menu" : "Open menu");
-  menuToggle.textContent = willOpen ? "×" : "☰";
-});
-for (const link of mobileMenu?.querySelectorAll("a") ?? []) {
-  link.addEventListener("click", () => {
-    if (mobileMenu) mobileMenu.hidden = true;
-    menuToggle?.setAttribute("aria-expanded", "false");
-    menuToggle?.setAttribute("aria-label", "Open menu");
-    if (menuToggle) menuToggle.textContent = "☰";
+// Platforms section: the visitor's own browser comes first.
+const platformCards = document.querySelector<HTMLElement>("[data-platform-cards]");
+const safariCard = platformCards?.querySelector<HTMLElement>('[data-platform="safari"]');
+const chromeCard = platformCards?.querySelector<HTMLElement>('[data-platform="chrome"]');
+const platformsLede = document.querySelector<HTMLElement>("[data-platforms-lede]");
+if (safariCard && SAFARI_URL) {
+  safariCard.classList.add("is-live");
+  safariCard.querySelector("[data-safari-status]")!.textContent = "Available now";
+  const link = document.createElement("a");
+  link.className = "button secondary small";
+  link.href = SAFARI_URL;
+  link.target = "_blank";
+  link.rel = "noreferrer";
+  link.textContent = "Get it on the App Store ↗";
+  safariCard.querySelector("[data-safari-card-link]")!.replaceWith(link);
+  if (platformsLede) platformsLede.textContent = "Available for Chrome on desktop and Safari on Mac, iPhone and iPad. Same rules everywhere.";
+}
+if (platformCards && safariCard && chromeCard && prefersSafari) {
+  platformCards.prepend(safariCard);
+  if (SAFARI_URL) {
+    safariCard.querySelector(".button")!.classList.replace("secondary", "primary");
+    chromeCard.querySelector(".button")!.classList.replace("primary", "secondary");
+  }
+  if (platformsLede && !SAFARI_URL) platformsLede.textContent = "Coming soon to Safari on Mac, iPhone and iPad, and available now for Chrome on desktop. Same rules everywhere.";
+}
+
+// Hero demo: runs only while visible, the page is in the foreground, and the visitor hasn't paused it.
+const demoRoot = document.querySelector<HTMLElement>("[data-demo]");
+if (demoRoot) {
+  const demo = new TabDemo(demoRoot);
+  let visible = false;
+  let paused = false;
+  const update = () => (visible && !paused && !document.hidden ? demo.start() : demo.stop());
+  new IntersectionObserver(([entry]) => { visible = entry.isIntersecting; update(); }).observe(demoRoot);
+  document.addEventListener("visibilitychange", update);
+  const toggle = demoRoot.querySelector<HTMLButtonElement>("[data-motion-toggle]");
+  toggle?.addEventListener("click", () => {
+    paused = !paused;
+    toggle.setAttribute("aria-pressed", String(paused));
+    toggle.textContent = paused ? "Resume demo" : "Pause demo";
+    update();
   });
 }
 
+const onceInView = (element: Element, callback: () => void, threshold = 0.5) => {
+  const observer = new IntersectionObserver(([entry]) => {
+    if (!entry.isIntersecting) return;
+    observer.disconnect();
+    callback();
+  }, { threshold });
+  observer.observe(element);
+};
+
+// "You have 47 tabs open": the count piles up as it scrolls in.
+const countdown = document.querySelector<HTMLElement>("[data-countdown]");
+if (countdown && !reducedMotion) {
+  const target = Number(countdown.textContent);
+  countdown.textContent = "9";
+  onceInView(countdown, () => {
+    const start = performance.now();
+    const step = (now: number) => {
+      const t = Math.min((now - start) / 1800, 1);
+      countdown.textContent = String(Math.round(9 + (target - 9) * (1 - (1 - t) ** 3)));
+      if (t < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }, 1);
+}
+
+// Promise vignettes loop only while on screen.
+const vignetteObserver = new IntersectionObserver((entries) => {
+  for (const entry of entries) entry.target.classList.toggle("in-view", entry.isIntersecting);
+}, { threshold: 0.4 });
+for (const vignette of document.querySelectorAll("[data-vignette]")) vignetteObserver.observe(vignette);
+
+// Final call to action: stray tabs keep wandering in and getting reaped; the strip stays calm.
+const strays = [
+  ["Article", "#a77bd6", "idle 5 days"],
+  ["Search results", "#7d8590", "duplicate"],
+  ["Rabbit hole", "#6b7b8c", "idle 2 days"],
+  ["Weather", "#3ba1e6", "idle 1 day"],
+  ["Docs", "#5b8def", "duplicate"],
+  ["Sourdough", "#4fae84", "idle 4 days"],
+] as const;
+const calm = document.querySelector<HTMLElement>("[data-calm]");
+if (calm && !reducedMotion) {
+  let visible = false;
+  let pending: ReturnType<typeof setTimeout> | undefined;
+  let strayIndex = 0;
+  const wait = (ms: number, next: () => void) => { pending = setTimeout(() => { pending = undefined; if (visible && !document.hidden) next(); }, ms); };
+  const cycle = () => {
+    const [title, color, reason] = strays[strayIndex++ % strays.length];
+    const tab = document.createElement("span");
+    tab.className = "v-tab is-hidden";
+    tab.innerHTML = `<i class="fav" style="--fav:${color}">${title[0]}</i>${title}`;
+    calm.append(tab);
+    requestAnimationFrame(() => requestAnimationFrame(() => tab.classList.remove("is-hidden")));
+    wait(2400, () => {
+      tab.classList.add("is-marked");
+      tab.insertAdjacentHTML("beforeend", `<span class="reason">${reason}</span>`);
+      wait(800, () => {
+        tab.querySelector(".reason")?.remove();
+        tab.classList.remove("is-marked");
+        dropElement(tab, reason);
+        tab.classList.add("is-hidden");
+        setTimeout(() => tab.remove(), 600);
+        wait(1600, cycle);
+      });
+    });
+  };
+  const restart = () => {
+    if (pending || !visible || document.hidden) return;
+    for (const tab of calm.querySelectorAll(".is-hidden, .is-marked")) tab.remove();
+    wait(700, cycle);
+  };
+  new IntersectionObserver(([entry]) => { visible = entry.isIntersecting; restart(); }, { threshold: 0.6 }).observe(calm);
+  document.addEventListener("visibilitychange", restart);
+}
+
+// Mobile menu
+const menuToggle = document.querySelector<HTMLButtonElement>(".menu-toggle");
+const mobileMenu = document.querySelector<HTMLElement>(".mobile-menu");
+const setMenu = (open: boolean) => {
+  if (!menuToggle || !mobileMenu) return;
+  mobileMenu.hidden = !open;
+  menuToggle.setAttribute("aria-expanded", String(open));
+  menuToggle.setAttribute("aria-label", open ? "Close menu" : "Open menu");
+};
+menuToggle?.addEventListener("click", () => setMenu(Boolean(mobileMenu?.hidden)));
+for (const link of mobileMenu?.querySelectorAll("a") ?? []) link.addEventListener("click", () => setMenu(false));
 document.addEventListener("keydown", (event) => {
   if (event.key !== "Escape" || !mobileMenu || mobileMenu.hidden) return;
-  mobileMenu.hidden = true;
-  menuToggle?.setAttribute("aria-expanded", "false");
-  menuToggle?.setAttribute("aria-label", "Open menu");
-  if (menuToggle) { menuToggle.textContent = "☰"; menuToggle.focus(); }
+  setMenu(false);
+  menuToggle?.focus();
 });
 document.addEventListener("click", (event) => {
   if (!(event.target instanceof Node) || !mobileMenu || mobileMenu.hidden) return;
-  if (mobileMenu.contains(event.target) || menuToggle?.contains(event.target)) return;
-  mobileMenu.hidden = true;
-  menuToggle?.setAttribute("aria-expanded", "false");
-  menuToggle?.setAttribute("aria-label", "Open menu");
-  if (menuToggle) menuToggle.textContent = "☰";
-});
-window.addEventListener("pagehide", () => {
-  for (const loop of ambientLoops.values()) loop.pause();
+  if (!mobileMenu.contains(event.target) && !menuToggle?.contains(event.target)) setMenu(false);
 });
