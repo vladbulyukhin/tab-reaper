@@ -133,7 +133,7 @@ export const RecentlyClosedTabs: React.FC = () => {
           Recently reaped tabs
         </h3>
         <p className="mt-1 text-xs text-muted-foreground">
-          Click a row to reopen a tab that Tab Reaper closed.
+          Select a tab to reopen it.
         </p>
         {historyError ? (
           <p className="mt-2 text-xs text-destructive" role="alert">
