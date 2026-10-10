@@ -18,7 +18,7 @@ function MainHeader() {
           <h4 className="truncate text-[1.2rem] leading-none font-semibold tracking-[-0.03em]">
             Tab Reaper
           </h4>
-          <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
+          <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">
             Quiet tab cleanup for focused browsing
           </p>
         </div>
