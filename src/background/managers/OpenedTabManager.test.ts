@@ -237,6 +237,10 @@ describe("OpenedTabManager", () => {
     return record;
   };
 
+  // Duplicate lookups query every inactive tab and match URLs locally.
+  const isDuplicateQuery = (queryInfo?: chrome.tabs.QueryInfo): boolean =>
+    queryInfo?.active === false && queryInfo.windowId === undefined;
+
   const mockTabQuery = (
     implementation: (
       queryInfo: chrome.tabs.QueryInfo,
@@ -696,7 +700,7 @@ describe("OpenedTabManager", () => {
         removeExactDuplicates: true,
       });
       mockTabQuery(async (queryInfo) => {
-        if (queryInfo?.url === source.url) return [source, duplicate];
+        if (isDuplicateQuery(queryInfo)) return [source, duplicate];
         if (queryInfo?.windowId === duplicate.windowId) return [duplicate];
         return [];
       });
@@ -770,7 +774,7 @@ describe("OpenedTabManager", () => {
         tabCountThreshold: 10,
       });
       mockTabQuery(async (queryInfo) => {
-        if (queryInfo?.url === source.url) return [source, duplicate];
+        if (isDuplicateQuery(queryInfo)) return [source, duplicate];
         if (queryInfo?.windowId === duplicate.windowId) return [wrongWindowTab];
         if (Object.keys(queryInfo ?? {}).length === 0) {
           return [source, duplicate, ...duplicateWindowTabs, wrongWindowTab];
@@ -1114,7 +1118,7 @@ describe("OpenedTabManager", () => {
         throw new Error(`Tab ${tabId} is closed`);
       });
       mockTabQuery(async (queryInfo) => {
-        if (queryInfo?.url === source.url) return duplicateQuery.promise;
+        if (isDuplicateQuery(queryInfo)) return duplicateQuery.promise;
         if (queryInfo?.windowId === duplicate.windowId) return [duplicate];
         return [];
       });
@@ -1125,7 +1129,6 @@ describe("OpenedTabManager", () => {
       await vi.waitFor(() =>
         expect(browserApiProvider.tab.query).toHaveBeenCalledWith({
           active: false,
-          url: source.url,
         }),
       );
 
@@ -1176,7 +1179,7 @@ describe("OpenedTabManager", () => {
         throw new Error(`Tab ${tabId} is closed`);
       });
       mockTabQuery(async (queryInfo) => {
-        if (queryInfo?.url === source.url) return duplicateQuery.promise;
+        if (isDuplicateQuery(queryInfo)) return duplicateQuery.promise;
         if (queryInfo?.windowId === duplicate.windowId) return [duplicate];
         return [];
       });
@@ -1187,7 +1190,6 @@ describe("OpenedTabManager", () => {
       await vi.waitFor(() =>
         expect(browserApiProvider.tab.query).toHaveBeenCalledWith({
           active: false,
-          url: source.url,
         }),
       );
 
@@ -1704,7 +1706,7 @@ describe("OpenedTabManager", () => {
         throw new Error(`Unexpected tab ${tabId}`);
       });
       mockTabQuery(async (queryInfo) => {
-        if (queryInfo?.url === navigatedSource.url) return [duplicate];
+        if (isDuplicateQuery(queryInfo)) return [duplicate];
         if (queryInfo?.windowId === source.windowId) {
           return [navigatedSource, duplicate];
         }
@@ -1770,7 +1772,7 @@ describe("OpenedTabManager", () => {
         throw new Error(`Unexpected tab ${tabId}`);
       });
       mockTabQuery(async (queryInfo) => {
-        if (queryInfo?.url === navigatedSource.url) return [duplicate];
+        if (isDuplicateQuery(queryInfo)) return [duplicate];
         if (queryInfo?.windowId === source.windowId) {
           return [navigatedSource, duplicate];
         }
@@ -1851,7 +1853,7 @@ describe("OpenedTabManager", () => {
         throw new Error(`Unexpected tab ${tabId}`);
       });
       mockTabQuery(async (queryInfo) =>
-        queryInfo?.url === navigatedSource.url ? [duplicate] : [],
+        isDuplicateQuery(queryInfo) ? [duplicate] : [],
       );
 
       const creation = getFirstListener<
@@ -1937,7 +1939,7 @@ describe("OpenedTabManager", () => {
         throw new Error(`Unexpected tab ${candidateId}`);
       });
       mockTabQuery(async (queryInfo) => {
-        if (queryInfo?.url === replacement.url) return [duplicate];
+        if (isDuplicateQuery(queryInfo)) return [duplicate];
         if (queryInfo?.windowId === replacement.windowId) {
           return [replacement, duplicate];
         }
@@ -2026,8 +2028,9 @@ describe("OpenedTabManager", () => {
         throw new Error(`Unexpected tab ${tabId}`);
       });
       mockTabQuery(async (queryInfo) => {
-        if (queryInfo?.url === oldUrl) return [oldDuplicate];
-        if (queryInfo?.url === latestUrl) return [latestDuplicate];
+        if (isDuplicateQuery(queryInfo)) {
+          return [oldDuplicate, latestDuplicate];
+        }
         if (queryInfo?.windowId === source.windowId) {
           return [{ ...source, url: latestUrl }, latestDuplicate];
         }
@@ -2108,8 +2111,9 @@ describe("OpenedTabManager", () => {
         throw new Error(`Unexpected tab ${tabId}`);
       });
       mockTabQuery(async (queryInfo) => {
-        if (queryInfo?.url === oldUrl) return [oldDuplicate];
-        if (queryInfo?.url === latestUrl) return [latestDuplicate];
+        if (isDuplicateQuery(queryInfo)) {
+          return [oldDuplicate, latestDuplicate];
+        }
         if (queryInfo?.windowId === source.windowId) {
           return [latestSource, latestDuplicate];
         }
@@ -2183,8 +2187,7 @@ describe("OpenedTabManager", () => {
         throw new Error(`Unexpected tab ${tabId}`);
       });
       mockTabQuery(async (queryInfo) => {
-        if (queryInfo?.url === source.url) return [duplicate];
-        if (queryInfo?.url === "https://example.com/new-source") return [];
+        if (isDuplicateQuery(queryInfo)) return [duplicate];
         return [];
       });
 
@@ -2274,8 +2277,7 @@ describe("OpenedTabManager", () => {
         throw new Error(`Unexpected tab ${tabId}`);
       });
       mockTabQuery(async (queryInfo) => {
-        if (queryInfo?.url === source.url) return [duplicate];
-        if (queryInfo?.url === latestSource.url) return [];
+        if (isDuplicateQuery(queryInfo)) return [duplicate];
         return [];
       });
 
@@ -2445,7 +2447,7 @@ describe("OpenedTabManager", () => {
         if (queryInfo?.windowId === firstDuplicate.windowId) {
           return openTabs;
         }
-        if (queryInfo?.url === newTab.url) {
+        if (isDuplicateQuery(queryInfo)) {
           return [firstDuplicate, secondDuplicate];
         }
         return [];
@@ -3058,7 +3060,7 @@ describe("OpenedTabManager", () => {
         throw new Error(`Unexpected tab ${tabId}`);
       });
       mockTabQuery(async (queryInfo) => {
-        if (queryInfo?.url === sourceTab.url) {
+        if (isDuplicateQuery(queryInfo)) {
           return [hiddenDuplicate];
         }
         return [];
@@ -3808,6 +3810,56 @@ describe("OpenedTabManager", () => {
   });
 
   describe("global duplicate cleanup", () => {
+    it("matches duplicate URLs locally instead of through a query pattern", async () => {
+      configurationManager.get.mockResolvedValue({
+        ...emptyConfiguration,
+        removeExactDuplicates: true,
+      });
+      const source = {
+        ...createTestTab(),
+        id: 1489,
+        windowId: 15,
+        url: "https://m.youtube.com/watch?v=abc&t=1",
+      };
+      const duplicate = { ...source, id: 1490, active: false };
+      const otherVideo = {
+        ...duplicate,
+        id: 1492,
+        url: "https://m.youtube.com/watch?v=xyz",
+      };
+      mockTabQuery(async (queryInfo) => {
+        if (queryInfo?.url) throw new Error("url filters are unreliable");
+        if (isDuplicateQuery(queryInfo)) return [duplicate, otherVideo];
+        if (queryInfo?.windowId === source.windowId) {
+          return [source, duplicate, otherVideo];
+        }
+        return [];
+      });
+      mockTabGet(async (tabId) => {
+        if (tabId === duplicate.id) return duplicate;
+        throw new Error("not found");
+      });
+
+      await getFirstListener<
+        (
+          id: TabId,
+          info: chrome.tabs.TabChangeInfo,
+          tab: chrome.tabs.Tab,
+        ) => unknown
+      >(browserApiProvider.tab.onUpdated.addListener)(
+        source.id,
+        { url: source.url },
+        source,
+      );
+
+      await vi.waitFor(() =>
+        expect(browserApiProvider.tab.remove).toHaveBeenCalledWith(
+          duplicate.id,
+        ),
+      );
+      expect(browserApiProvider.tab.remove).toHaveBeenCalledTimes(1);
+    });
+
     it("aborts duplicate cleanup when configuration cannot be read", async () => {
       configurationManager.get.mockRejectedValue(new Error("storage offline"));
       const source = {
@@ -3832,7 +3884,6 @@ describe("OpenedTabManager", () => {
 
       expect(browserApiProvider.tab.query).not.toHaveBeenCalledWith({
         active: false,
-        url: source.url,
       });
       expect(browserApiProvider.tab.remove).not.toHaveBeenCalled();
     });
@@ -3866,7 +3917,7 @@ describe("OpenedTabManager", () => {
       };
       let openTabs = [source, duplicate, companion, active];
       mockTabQuery(async (queryInfo) => {
-        if (queryInfo?.url === source.url) {
+        if (isDuplicateQuery(queryInfo)) {
           return queryInfo.windowId === undefined ? [source, duplicate] : [];
         }
         if (queryInfo?.windowId === duplicate.windowId) {
@@ -3897,7 +3948,6 @@ describe("OpenedTabManager", () => {
 
       expect(browserApiProvider.tab.query).toHaveBeenCalledWith({
         active: false,
-        url: source.url,
       });
       expect(browserApiProvider.tab.remove).toHaveBeenCalledWith(duplicate.id);
       expect(browserApiProvider.tab.remove).not.toHaveBeenCalledWith(source.id);
@@ -3924,7 +3974,7 @@ describe("OpenedTabManager", () => {
       };
       mockTabGet(async () => fragmentMatch);
       mockTabQuery(async (queryInfo) => {
-        if (queryInfo?.url === source.url) return [source, fragmentMatch];
+        if (isDuplicateQuery(queryInfo)) return [source, fragmentMatch];
         if (queryInfo?.windowId === fragmentMatch.windowId) {
           return [source, fragmentMatch];
         }
@@ -3965,7 +4015,7 @@ describe("OpenedTabManager", () => {
       };
       let openTabs = [source, duplicate];
       mockTabQuery(async (queryInfo) => {
-        if (queryInfo?.url === source.url) return [source, duplicate];
+        if (isDuplicateQuery(queryInfo)) return [source, duplicate];
         if (Object.keys(queryInfo ?? {}).length === 0) return openTabs;
         return [];
       });
@@ -4026,7 +4076,7 @@ describe("OpenedTabManager", () => {
       const protectedCheck = createDeferred<boolean>();
       let currentCandidate = duplicate;
       mockTabQuery(async (queryInfo) => {
-        if (queryInfo?.url === source.url) return [source, duplicate];
+        if (isDuplicateQuery(queryInfo)) return [source, duplicate];
         if (queryInfo?.windowId === duplicate.windowId) {
           return [source, currentCandidate];
         }
@@ -4091,8 +4141,12 @@ describe("OpenedTabManager", () => {
       };
       const duplicateQuery = createDeferred<ReadonlyArray<chrome.tabs.Tab>>();
       let currentCandidate = duplicate;
+      let duplicateQueries = 0;
       mockTabQuery(async (queryInfo) => {
-        if (queryInfo?.url === source.url) return duplicateQuery.promise;
+        if (isDuplicateQuery(queryInfo)) {
+          duplicateQueries += 1;
+          return duplicateQueries === 1 ? duplicateQuery.promise : [];
+        }
         if (queryInfo?.windowId === duplicate.windowId) {
           return [source, currentCandidate];
         }
@@ -4114,7 +4168,6 @@ describe("OpenedTabManager", () => {
       await vi.waitFor(() =>
         expect(browserApiProvider.tab.query).toHaveBeenCalledWith({
           active: false,
-          url: source.url,
         }),
       );
 
@@ -4154,8 +4207,7 @@ describe("OpenedTabManager", () => {
       let currentCandidate = duplicate;
       mockTabGet(async () => candidateLookup.promise);
       mockTabQuery(async (queryInfo) => {
-        if (queryInfo?.url === source.url) return [source, duplicate];
-        if (queryInfo?.url === navigated.url) return [];
+        if (isDuplicateQuery(queryInfo)) return [source, duplicate];
         return [];
       });
 
@@ -4408,7 +4460,7 @@ describe("OpenedTabManager", () => {
       });
       mockTabGet(async () => duplicate);
       mockTabQuery(async (queryInfo) => {
-        if (queryInfo?.url === source.url) return [source, duplicate];
+        if (isDuplicateQuery(queryInfo)) return [source, duplicate];
         if (queryInfo?.windowId === source.windowId) return [source, duplicate];
         return [];
       });

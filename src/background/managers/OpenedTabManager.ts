@@ -586,14 +586,15 @@ export class OpenedTabManager implements IOpenedTabManager {
     const activityRevisionSnapshot = this.lifecycle.activitySnapshot();
     let duplicates: ReadonlyArray<chrome.tabs.Tab>;
     try {
+      // Match URLs here rather than via query({ url }): Safari treats that
+      // filter as a match pattern and misses addresses with query strings.
       const queriedTabs = await this.browserApiProvider.tab.query({
         active: false,
-        url,
       });
       if (!Array.isArray(queriedTabs)) {
         return;
       }
-      duplicates = queriedTabs;
+      duplicates = queriedTabs.filter((tab) => tab.url === url);
     } catch {
       return;
     }
@@ -603,7 +604,7 @@ export class OpenedTabManager implements IOpenedTabManager {
       .filter((tab) => this.isVisibleTab(tab))
       .filter(
         (tab): tab is chrome.tabs.Tab & { id: TabId } =>
-          typeof tab.id === "number" && tab.id !== tabId && tab.url === url,
+          typeof tab.id === "number" && tab.id !== tabId,
       )
       .map((tab) => ({
         tabId: tab.id,
