@@ -54,10 +54,12 @@ export const Settings: React.FC = () => {
 
   return (
     <div className="flex w-full flex-col gap-3 px-3 py-4">
+      {/* Reserve the line so a save that starts mid-click (blur on mousedown)
+          does not shift the form away from the pointer. */}
       <div
         role="status"
         aria-live="polite"
-        className="text-sm text-muted-foreground"
+        className="min-h-5 text-sm text-muted-foreground"
       >
         {saveStatus === "saving" ? (
           "Saving settings…"
@@ -73,7 +75,9 @@ export const Settings: React.FC = () => {
               Retry
             </button>
           </>
-        ) : null}
+        ) : (
+          "Changes save automatically."
+        )}
       </div>
       <Form {...form}>
         <form

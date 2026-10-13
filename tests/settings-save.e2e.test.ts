@@ -38,3 +38,23 @@ test("keeps diagnostics hidden after a failed save and persists a successful ret
   await page.reload();
   await expect(toggle).toBeChecked();
 });
+
+test("keeps a toggle click that ends a number edit", async ({
+  page,
+  extensionId,
+}) => {
+  await page.goto(
+    `chrome-extension://${extensionId}/src/popup/index.html#/settings`,
+  );
+  const toggle = page.getByTestId("removeExactDuplicates");
+  await expect(toggle).toBeEnabled();
+  await expect(toggle).not.toBeChecked();
+  // The click blurs the number field, which starts a save. The status line
+  // must not shift the toggle away from the pointer mid-click.
+  await page.getByTestId("tabCountThreshold").fill("8");
+  await toggle.check();
+  await expect(page.getByRole("status")).toContainText("Settings saved");
+  await page.reload();
+  await expect(toggle).toBeChecked();
+  await expect(page.getByTestId("tabCountThreshold")).toHaveValue("8");
+});
