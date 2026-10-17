@@ -86,10 +86,13 @@ export class BackgroundService implements IBackgroundService {
   public start(): void {
     this.registerMessageHandlers();
     logInfo("BackgroundService start");
+    // Paused time never counts as idle: every tab gets a full delay.
     this.snoozeManager.onEnded(() => {
-      void this.openedTabManager.rescheduleOpenTabs().catch((error) => {
-        logInfo("Failed to reschedule tabs after snooze ended", error);
-      });
+      void this.openedTabManager
+        .rescheduleOpenTabs({ recalculateIdleDeadlines: true })
+        .catch((error) => {
+          logInfo("Failed to reschedule tabs after snooze ended", error);
+        });
     });
     void this.snoozeManager.ensureAlarmScheduled().catch((error) => {
       logInfo("Failed to reconcile snooze state", error);
@@ -510,9 +513,11 @@ export class BackgroundService implements IBackgroundService {
         try {
           await this.snoozeManager.clearSnooze();
           sendResponse({ status: "ok", snoozed: false, until: null });
+          return { recalculateIdleDeadlines: true };
         } catch (error) {
           logInfo("clearSnooze failed", error);
           sendResponse({ status: "error", snoozed: false, until: null });
+          return {};
         }
       },
     );

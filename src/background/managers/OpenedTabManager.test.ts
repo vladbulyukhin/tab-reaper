@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { type DeepMockProxy, mockDeep } from "vitest-mock-extended";
 import type { IBrowserApiProvider } from "../../api/IBrowserApiProvider";
 import { emptyConfiguration } from "../../common/models/Configuration";
@@ -1613,6 +1613,180 @@ describe("OpenedTabManager", () => {
       await listener();
 
       expect(excludedTabManager.reconcileOpenTabs).toHaveBeenCalledWith([tab]);
+    });
+  });
+
+  describe("idle clock while a tab cannot close", () => {
+    const delay = emptyConfiguration.tabRemovalDelayMin * 60_000;
+    const start = 1_700_000_000_000;
+    let now = start;
+
+    beforeEach(() => {
+      now = start;
+      vi.spyOn(Date, "now").mockImplementation(() => now);
+    });
+
+    afterEach(() => {
+      vi.mocked(Date.now).mockRestore();
+    });
+
+    const idleTab = (overrides: Partial<chrome.tabs.Tab> = {}) =>
+      ({
+        ...createTestTab(),
+        id: 640,
+        windowId: 1,
+        lastAccessed: start - 2 * delay,
+        ...overrides,
+      }) as chrome.tabs.Tab & { id: number; lastAccessed: number };
+
+    const serveTabs = (getTab: () => chrome.tabs.Tab) => {
+      mockTabGet(async () => getTab());
+      mockTabQuery(async () => [getTab()]);
+    };
+
+    const fireUpdate = (tabId: TabId, changeInfo: chrome.tabs.TabChangeInfo) =>
+      getFirstListener<
+        (tabId: number, changeInfo: chrome.tabs.TabChangeInfo) => Promise<void>
+      >(browserApiProvider.tab.onUpdated.addListener)(tabId, changeInfo);
+
+    const lastAlarmDeadline = () =>
+      vi.mocked(tabAlarmManager.setIdleAlarm).mock.calls.at(-1)?.[1];
+
+    it("starts a fresh delay when a background tab stops playing audio", async () => {
+      let tab = idleTab();
+      serveTabs(() => tab);
+      await createIdleRecord(tab, start + 60_000);
+
+      tab = { ...tab, audible: true };
+      await fireUpdate(tab.id, { audible: true });
+      await vi.waitFor(() =>
+        expect(tabAlarmManager.clearIdleAlarm).toHaveBeenCalled(),
+      );
+      tabAlarmManager.setIdleAlarm.mockClear();
+
+      now = start + 10 * 60_000;
+      tab = { ...tab, audible: false };
+      await fireUpdate(tab.id, { audible: false });
+
+      await vi.waitFor(() => expect(lastAlarmDeadline()).toBe(now + delay));
+    });
+
+    it("starts a fresh delay when a tab is unpinned", async () => {
+      configurationManager.get.mockResolvedValue({
+        ...emptyConfiguration,
+        keepPinnedTabs: true,
+      });
+      let tab = idleTab({ pinned: true });
+      serveTabs(() => tab);
+      await openedTabManager.rescheduleOpenTabs();
+      expect(tabAlarmManager.setIdleAlarm).not.toHaveBeenCalled();
+
+      now = start + 10 * 60_000;
+      tab = { ...tab, pinned: false };
+      await fireUpdate(tab.id, { pinned: false });
+
+      await vi.waitFor(() => expect(lastAlarmDeadline()).toBe(now + delay));
+    });
+
+    it("starts a fresh delay when a protected site is unprotected", async () => {
+      const tab = idleTab();
+      serveTabs(() => tab);
+      protectedSiteManager.isProtectedUrl.mockResolvedValue(true);
+      await openedTabManager.rescheduleOpenTabs();
+      expect(tabAlarmManager.setIdleAlarm).not.toHaveBeenCalled();
+
+      now = start + 10 * 60_000;
+      protectedSiteManager.isProtectedUrl.mockResolvedValue(false);
+      await openedTabManager.rescheduleOpenTabs();
+
+      expect(lastAlarmDeadline()).toBe(now + delay);
+    });
+
+    it("holds a running deadline when its alarm finds the tab protected", async () => {
+      const tab = idleTab();
+      serveTabs(() => tab);
+      protectedSiteManager.isProtectedUrl.mockResolvedValue(true);
+      const record = await fireIdleAlarm(tab, start);
+      await vi.waitFor(() =>
+        expect(tabAlarmManager.clearIdleAlarm).toHaveBeenCalledWith(
+          record.id,
+          record.revision,
+        ),
+      );
+      expect(browserApiProvider.tab.remove).not.toHaveBeenCalled();
+
+      now = start + 10 * 60_000;
+      protectedSiteManager.isProtectedUrl.mockResolvedValue(false);
+      await openedTabManager.rescheduleOpenTabs();
+
+      expect(lastAlarmDeadline()).toBe(now + delay);
+    });
+
+    it("starts a fresh delay when a Pause ends", async () => {
+      const tab = idleTab();
+      serveTabs(() => tab);
+      await openedTabManager.rescheduleOpenTabs();
+      expect(lastAlarmDeadline()).toBe(tab.lastAccessed + delay);
+
+      snoozeManager.isSnoozed.mockResolvedValue(true);
+      await openedTabManager.clearScheduledRemovals();
+      await openedTabManager.rescheduleOpenTabs();
+
+      now = start + 10 * 60_000;
+      snoozeManager.isSnoozed.mockResolvedValue(false);
+      tabAlarmManager.setIdleAlarm.mockClear();
+      await openedTabManager.rescheduleOpenTabs();
+
+      expect(lastAlarmDeadline()).toBe(now + delay);
+    });
+
+    it("counts time while the browser was closed as idle at startup", async () => {
+      const tab = idleTab();
+      serveTabs(() => tab);
+
+      await getFirstListener<() => Promise<void>>(
+        browserApiProvider.runtime.onStartup.addListener,
+      )();
+
+      expect(lastAlarmDeadline()).toBe(tab.lastAccessed + delay);
+    });
+
+    const fireInstalled = (previousVersion: string) =>
+      getFirstListener<
+        (details: chrome.runtime.InstalledDetails) => Promise<void>
+      >(browserApiProvider.runtime.onInstalled.addListener)({
+        reason: "update",
+        previousVersion,
+      } as chrome.runtime.InstalledDetails);
+
+    it("gives every tab a fresh delay after an update from before 1.0.0", async () => {
+      const tab = idleTab();
+      serveTabs(() => tab);
+
+      await fireInstalled("0.2.1");
+
+      expect(lastAlarmDeadline()).toBe(start + delay);
+    });
+
+    it("replaces deadlines set by the background start before the update event", async () => {
+      const tab = idleTab();
+      serveTabs(() => tab);
+      await openedTabManager.rescheduleOpenTabs();
+      expect(lastAlarmDeadline()).toBe(tab.lastAccessed + delay);
+
+      now = start + 1_000;
+      await fireInstalled("0.2.1");
+
+      expect(lastAlarmDeadline()).toBe(now + delay);
+    });
+
+    it("keeps idle time across an update from 1.0.0 or later", async () => {
+      const tab = idleTab();
+      serveTabs(() => tab);
+
+      await fireInstalled("1.0.0");
+
+      expect(lastAlarmDeadline()).toBe(tab.lastAccessed + delay);
     });
   });
 
@@ -3308,9 +3482,8 @@ describe("OpenedTabManager", () => {
       );
     });
 
-    it("keeps the deadline when an inactive tab is initially excluded", async () => {
+    it("holds the deadline while an inactive tab is initially excluded", async () => {
       const now = 1_700_000_000_000;
-      const deadline = now - 60_000;
       vi.spyOn(Date, "now").mockReturnValue(now);
       const tab = {
         ...createTestTab(),
@@ -3325,15 +3498,15 @@ describe("OpenedTabManager", () => {
         browserApiProvider.tab.onCreated.addListener,
       )(tab);
 
-      await expect(
-        new IdleTabLedger(browserApiProvider.localStorage).getBoundRecord(
-          tab.id,
-        ),
-      ).resolves.toMatchObject({ deadline });
+      const record = await new IdleTabLedger(
+        browserApiProvider.localStorage,
+      ).getBoundRecord(tab.id);
+      expect(record?.held).toBe(true);
+      expect(record?.deadline).toBeUndefined();
       expect(tabAlarmManager.setIdleAlarm).not.toHaveBeenCalled();
     });
 
-    it("uses the retained deadline when an excluded tab becomes eligible", async () => {
+    it("starts a fresh delay when an excluded tab becomes eligible", async () => {
       const now = 1_700_000_000_000;
       const deadline = now - 60_000;
       vi.spyOn(Date, "now").mockReturnValue(now);
@@ -3355,15 +3528,15 @@ describe("OpenedTabManager", () => {
 
       expect(tabAlarmManager.setIdleAlarm).toHaveBeenCalledWith(
         idleRecordId(tab.id),
-        deadline,
+        now + 30 * 60_000,
         expect.any(Number),
       );
     });
 
-    it("uses the retained deadline when a pinned tab becomes eligible", async () => {
+    it("starts a fresh delay when a pinned tab becomes eligible", async () => {
       const now = 1_700_000_000_000;
       const lastAccessed = now - 31 * 60_000;
-      const deadline = lastAccessed + 30 * 60_000;
+      const deadline = now + 30 * 60_000;
       vi.spyOn(Date, "now").mockReturnValue(now);
       const tab = {
         ...createTestTab(),

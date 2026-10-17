@@ -31,6 +31,19 @@ function isRecoverableUrl(url: string | null | undefined): boolean {
   }
 }
 
+// Before 1.0.0, Keeps lived in session storage and are lost on update.
+const firstDurableKeepVersion = "1.0.0";
+
+function isVersionBelow(version: string, minimum: string): boolean {
+  const parts = version.split(".").map((part) => Number.parseInt(part, 10));
+  const minimumParts = minimum.split(".").map(Number);
+  for (let index = 0; index < minimumParts.length; index += 1) {
+    const part = Number.isFinite(parts[index]) ? parts[index] : 0;
+    if (part !== minimumParts[index]) return part < minimumParts[index];
+  }
+  return false;
+}
+
 type DuplicateSourceOwnership = {
   tabId: TabId;
   activityRevision: number;
@@ -147,6 +160,7 @@ export class OpenedTabManager implements IOpenedTabManager {
     );
 
     this.registerOpenTabs = this.registerOpenTabs.bind(this);
+    this.onInstalled = this.onInstalled.bind(this);
     this.onTabActivated = this.onTabActivated.bind(this);
     this.onTabCreated = this.onTabCreated.bind(this);
     this.onTabUpdated = this.onTabUpdated.bind(this);
@@ -273,11 +287,9 @@ export class OpenedTabManager implements IOpenedTabManager {
   }
 
   public async watchTabs(): Promise<void> {
-    this.browserApiProvider.runtime.onInstalled.addListener(
-      this.registerOpenTabs,
-    );
-    this.browserApiProvider.runtime.onStartup.addListener(
-      this.registerOpenTabs,
+    this.browserApiProvider.runtime.onInstalled.addListener(this.onInstalled);
+    this.browserApiProvider.runtime.onStartup.addListener(() =>
+      this.registerOpenTabs(),
     );
 
     this.browserApiProvider.tab.onActivated.addListener(this.onTabActivated);
@@ -286,7 +298,24 @@ export class OpenedTabManager implements IOpenedTabManager {
     this.browserApiProvider.tab.onRemoved.addListener(this.onTabRemoved);
   }
 
-  private async registerOpenTabs(): Promise<void> {
+  // Keeps made before 1.0.0 cannot be migrated, so tabs idle for longer than
+  // the delay would close right after the update. Give every tab a full delay
+  // from the update instead.
+  private async onInstalled(
+    details?: chrome.runtime.InstalledDetails,
+  ): Promise<void> {
+    const upgradedFromSessionKeeps =
+      details?.reason === "update" &&
+      typeof details.previousVersion === "string" &&
+      isVersionBelow(details.previousVersion, firstDurableKeepVersion);
+    await this.registerOpenTabs(
+      upgradedFromSessionKeeps ? { idleSince: Date.now() } : {},
+    );
+  }
+
+  private async registerOpenTabs(
+    options: { idleSince?: number } = {},
+  ): Promise<void> {
     await this.tabAlarmManager.clearLegacyAlarms();
     const allTabs = await this.safeQueryAllTabs();
     const tabs = allTabs.filter(
@@ -302,6 +331,15 @@ export class OpenedTabManager implements IOpenedTabManager {
       );
     }
     await this.idleTabLedger.reconcile(allTabs);
+    if (options.idleSince !== undefined) {
+      await Promise.all(
+        allTabs
+          .map((tab) => tab.id)
+          .filter((tabId): tabId is TabId => typeof tabId === "number")
+          .map((tabId) => this.clearAlarm(tabId)),
+      );
+      await this.idleTabLedger.restartIdleClocks(options.idleSince);
+    }
     await this.excludedTabManager.reconcileOpenTabs(allTabs);
     await this.previousActiveTabByWindow.update((previous) => ({
       ...previous,
@@ -320,7 +358,7 @@ export class OpenedTabManager implements IOpenedTabManager {
         clearTimeout(this.registerOpenTabsRetryTimeoutId);
       }
       this.registerOpenTabsRetryTimeoutId = setTimeout(() => {
-        this.registerOpenTabs().catch(() => undefined);
+        this.registerOpenTabs(options).catch(() => undefined);
       }, 500 * this.registerOpenTabsRetries) as unknown as number;
     }
   }
@@ -981,6 +1019,22 @@ export class OpenedTabManager implements IOpenedTabManager {
       return;
     }
 
+    // Check eligibility before touching the deadline: time spent unable to
+    // close (audible, pinned, protected, paused) never counts as idle.
+    if (
+      (await this.snoozeManager.isSnoozed()) ||
+      !(await this.canRemoveTab(tab, configuration))
+    ) {
+      this.recordDiagnostic("schedule-skipped-ineligible", {
+        tab: toCleanupDiagnosticsTab(tab),
+      });
+      if (!(await stillOwned())) return;
+      await this.clearAlarm(tabId);
+      await this.idleTabLedger.holdInactive(tab);
+      return;
+    }
+    if (!(await stillOwned())) return;
+
     const idleRecord = await this.idleTabLedger.ensureInactive(
       tab,
       configuration.tabRemovalDelayMin * 60_000,
@@ -988,11 +1042,7 @@ export class OpenedTabManager implements IOpenedTabManager {
     const deadline = idleRecord.deadline;
     if (!(await stillOwned())) return;
 
-    if (
-      !deadline ||
-      (await this.snoozeManager.isSnoozed()) ||
-      !(await this.canRemoveTab(tab, configuration))
-    ) {
+    if (!deadline) {
       this.recordDiagnostic("schedule-skipped-ineligible", {
         deadline,
         tab: toCleanupDiagnosticsTab(tab),

@@ -15,6 +15,9 @@ export const savedKeepLifetimeMs = 30 * 24 * 60 * 60_000;
 export type IdleTabRecord = {
   contextKey: string;
   deadline?: number;
+  // The tab could not be closed when last checked; its delay restarts in
+  // full once it can.
+  held?: boolean;
   id: string;
   kept: boolean;
   uncertainKeep?: boolean;
@@ -333,36 +336,7 @@ export class IdleTabLedger {
       throw new Error("Idle tab records require a tab ID");
     }
     return await this.updateResult(async (state) => {
-      const identity = await this.identifyTab(tab, state.salt, 0);
-      for (const candidate of state.records) {
-        if (candidate.tabId === tabId && candidate.urlKey !== identity.urlKey) {
-          candidate.tabId = undefined;
-        }
-      }
-      let record = state.records.find(
-        (candidate) =>
-          candidate.tabId === tabId && candidate.urlKey === identity.urlKey,
-      );
-      if (!record) {
-        record = {
-          id: createId(),
-          contextKey: identity.contextKey,
-          kept: false,
-          uncertainKeep: state.records.some(
-            (candidate) =>
-              candidate.urlKey === identity.urlKey && candidate.kept,
-          ),
-          keepSourceIds: keepSources(state.records, identity.urlKey).map(
-            (source) => source.id,
-          ),
-          lastSeenAt: Date.now(),
-          ordinal: identity.ordinal,
-          revision: 0,
-          tabId,
-          urlKey: identity.urlKey,
-        };
-        state.records.push(record);
-      }
+      const record = await this.bindRecord(state, tab, tabId);
       if (record.deadline === undefined) {
         const lastAccessed = (
           tab as chrome.tabs.Tab & {
@@ -376,7 +350,9 @@ export class IdleTabLedger {
             ? lastAccessed
             : Date.now();
         record.deadline =
-          (record.inactiveSince ?? inactiveSince) + delayInMilliseconds;
+          (record.held ? Date.now() : record.inactiveSince ?? inactiveSince) +
+          delayInMilliseconds;
+        record.held = undefined;
         record.revision += 1;
       }
       record.lastSeenAt = Date.now();
@@ -384,6 +360,78 @@ export class IdleTabLedger {
       state.records = trimRecords(state.records);
       return { result: record, state };
     });
+  }
+
+  // A tab that cannot be closed (audible, pinned, protected, paused) does not
+  // accumulate idle time; its deadline is dropped until it can close again.
+  public async holdInactive(tab: chrome.tabs.Tab): Promise<void> {
+    const tabId = tab.id;
+    if (typeof tabId !== "number") {
+      throw new Error("Idle tab records require a tab ID");
+    }
+    await this.updateState(async (state) => {
+      const record = await this.bindRecord(state, tab, tabId);
+      if (record.deadline !== undefined) {
+        record.deadline = undefined;
+        record.revision += 1;
+      }
+      record.held = true;
+      record.lastSeenAt = Date.now();
+      this.observedRecords.add(record.id);
+      state.records = trimRecords(state.records);
+      return state;
+    });
+  }
+
+  // Every tab's idle time starts over at `at`, ignoring lastAccessed.
+  public async restartIdleClocks(at: number): Promise<void> {
+    await this.updateState(async (state) => {
+      for (const record of state.records) {
+        if (record.deadline !== undefined) {
+          record.deadline = undefined;
+          record.revision += 1;
+        }
+        record.held = undefined;
+        record.inactiveSince = at;
+      }
+      return state;
+    });
+  }
+
+  private async bindRecord(
+    state: IdleTabLedgerState,
+    tab: chrome.tabs.Tab,
+    tabId: TabId,
+  ): Promise<IdleTabRecord> {
+    const identity = await this.identifyTab(tab, state.salt, 0);
+    for (const candidate of state.records) {
+      if (candidate.tabId === tabId && candidate.urlKey !== identity.urlKey) {
+        candidate.tabId = undefined;
+      }
+    }
+    const existing = state.records.find(
+      (candidate) =>
+        candidate.tabId === tabId && candidate.urlKey === identity.urlKey,
+    );
+    if (existing) return existing;
+    const record: IdleTabRecord = {
+      id: createId(),
+      contextKey: identity.contextKey,
+      kept: false,
+      uncertainKeep: state.records.some(
+        (candidate) => candidate.urlKey === identity.urlKey && candidate.kept,
+      ),
+      keepSourceIds: keepSources(state.records, identity.urlKey).map(
+        (source) => source.id,
+      ),
+      lastSeenAt: Date.now(),
+      ordinal: identity.ordinal,
+      revision: 0,
+      tabId,
+      urlKey: identity.urlKey,
+    };
+    state.records.push(record);
+    return record;
   }
 
   public async getBoundRecord(tabId: TabId): Promise<IdleTabRecord | null> {
@@ -755,6 +803,7 @@ function parseLedger(value: unknown): IdleTabLedgerState {
         !Number.isInteger(record.ordinal) ||
         !Number.isInteger(record.revision) ||
         (record.deadline !== undefined && !Number.isFinite(record.deadline)) ||
+        (record.held !== undefined && typeof record.held !== "boolean") ||
         (record.tabId !== undefined && !Number.isInteger(record.tabId)) ||
         (record.inactiveSince !== undefined &&
           !Number.isFinite(record.inactiveSince)) ||

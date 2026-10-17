@@ -142,6 +142,21 @@ const createCurrentSiteHarness = (url: string) => {
   };
 };
 
+describe("Pause", () => {
+  it("restarts every idle deadline when the user resumes early", async () => {
+    const harness = createCurrentSiteHarness("https://example.com/");
+    Reflect.set(harness.service, "snoozeManager", {
+      clearSnooze: vi.fn(async () => undefined),
+    });
+
+    await harness.getHandler("clearSnooze")({}, {}, vi.fn());
+
+    expect(harness.rescheduleOpenTabs).toHaveBeenCalledWith({
+      recalculateIdleDeadlines: true,
+    });
+  });
+});
+
 describe("saved Keep recovery", () => {
   it("does not modify Keeps when the visible-tab query fails", async () => {
     const harness = createCurrentSiteHarness("https://example.com/");
@@ -226,6 +241,21 @@ describe("BackgroundService.start snooze integration", () => {
         "Failed to reconcile snooze state",
         error,
       ),
+    );
+  });
+
+  it("restarts every idle deadline when a Pause ends", async () => {
+    const { service, onEnded, rescheduleOpenTabs } = createStartHarness();
+    service.start();
+    await vi.waitFor(() => expect(rescheduleOpenTabs).toHaveBeenCalledOnce());
+    const handleEnded = onEnded.mock.calls[0]?.[0] as (() => void) | undefined;
+
+    handleEnded?.();
+
+    await vi.waitFor(() =>
+      expect(rescheduleOpenTabs).toHaveBeenLastCalledWith({
+        recalculateIdleDeadlines: true,
+      }),
     );
   });
 
