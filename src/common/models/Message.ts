@@ -27,7 +27,7 @@ export type MessagePayloads = {
 };
 
 export type MessageResponses = {
-  getConfig: IConfiguration;
+  getConfig: IConfiguration | { status: "error" };
   setConfig: { status: string };
   getCurrentTabKeepState: {
     status: "ok" | "error";

@@ -201,12 +201,19 @@ describe("ProtectedSiteManager", () => {
       ]);
     });
 
+    it("reports an invalid hostname without storing it", async () => {
+      await expect(protectedSiteManager.add("not a host")).resolves.toBe(false);
+
+      expect(syncStorage.set).not.toHaveBeenCalled();
+      expect(localStorage.set).not.toHaveBeenCalled();
+    });
+
     it("updates the storage area that succeeds when the other storage area fails", async () => {
       syncStorage.set.mockRejectedValueOnce(new Error("sync quota exceeded"));
 
       await expect(
         protectedSiteManager.add("https://Example.com/docs"),
-      ).resolves.toBeUndefined();
+      ).resolves.toBe(true);
 
       expect(syncStorage.set).toHaveBeenCalledWith({
         [protectedSitesKey]: persistedSites(["example.com"]),

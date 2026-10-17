@@ -121,7 +121,7 @@ export class BackgroundService implements IBackgroundService {
           sendResponse(configuration);
         } catch (error) {
           logInfo("getConfig failed", error);
-          sendResponse(emptyConfiguration);
+          sendResponse({ status: "error" });
         }
       },
     );
@@ -276,8 +276,8 @@ export class BackgroundService implements IBackgroundService {
       "addProtectedSite",
       async (payload, _sender, sendResponse) => {
         try {
-          await this.protectedSiteManager.add(payload.hostname);
-          sendResponse({ status: "ok" });
+          const added = await this.protectedSiteManager.add(payload.hostname);
+          sendResponse({ status: added ? "ok" : "error" });
         } catch (error) {
           logInfo("addProtectedSite failed", error);
           sendResponse({ status: "error" });

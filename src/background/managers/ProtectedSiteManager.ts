@@ -3,7 +3,8 @@ import { SyncedValue } from "../utils/SyncedValue";
 
 export interface IProtectedSiteManager {
   list(): Promise<ReadonlyArray<string>>;
-  add(hostnameOrUrl: string): Promise<void>;
+  // Resolves false when the input is not a valid hostname or URL.
+  add(hostnameOrUrl: string): Promise<boolean>;
   remove(hostnameOrUrl: string): Promise<void>;
   getMatchingRule(
     hostnameOrUrl: string | null | undefined,
@@ -85,10 +86,11 @@ export class ProtectedSiteManager implements IProtectedSiteManager {
   public list(): Promise<ReadonlyArray<string>> {
     return this.sites.get();
   }
-  public async add(hostnameOrUrl: string): Promise<void> {
+  public async add(hostnameOrUrl: string): Promise<boolean> {
     const host = hostnameFromInput(hostnameOrUrl);
-    if (host)
-      await this.sites.update((current) => uniqSorted([...current, host]));
+    if (!host) return false;
+    await this.sites.update((current) => uniqSorted([...current, host]));
+    return true;
   }
   public async remove(hostnameOrUrl: string): Promise<void> {
     const host = hostnameFromInput(hostnameOrUrl);

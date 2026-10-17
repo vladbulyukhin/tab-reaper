@@ -74,7 +74,9 @@ export function useSettingsForm() {
 
   const load = useCallback(async () => {
     if (!sendMessage) throw new Error("Background is unavailable");
-    return sendMessage("getConfig", undefined);
+    const response = await sendMessage("getConfig", undefined);
+    if ("status" in response) throw new Error("Could not load settings");
+    return response;
   }, [sendMessage]);
   const resource = useAsyncResource(sendMessage ? load : null);
   const loaded = resource.data !== null;

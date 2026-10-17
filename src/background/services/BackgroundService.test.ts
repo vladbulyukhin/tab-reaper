@@ -60,7 +60,7 @@ const createCurrentSiteHarness = (url: string) => {
   ) as BackgroundService;
   const onMessage = vi.fn();
   const list = vi.fn(async () => ["example.com"]);
-  const add = vi.fn(async () => undefined);
+  const add = vi.fn(async () => true);
   const remove = vi.fn(async () => undefined);
   const rescheduleOpenTabs = vi.fn(async () => undefined);
   const exclude = vi.fn(async () => undefined);
@@ -438,6 +438,41 @@ describe("BackgroundService current-site protocol support", () => {
       hostname: "www.example.com",
       supported: true,
     });
+  });
+
+  it("reports an error when settings cannot be read instead of sending defaults", async () => {
+    const harness = createCurrentSiteHarness("https://example.com/");
+    Reflect.set(harness.service, "configurationManager", {
+      get: vi.fn(async () => {
+        throw new Error("storage unavailable");
+      }),
+    });
+    const sendResponse = vi.fn();
+
+    await harness.getHandler("getConfig")(
+      undefined as never,
+      {} as chrome.runtime.MessageSender,
+      sendResponse,
+    );
+
+    expect(sendResponse).toHaveBeenCalledWith({ status: "error" });
+  });
+
+  it("reports an error when a protected-site hostname is not stored", async () => {
+    const { getHandler, add } = createCurrentSiteHarness(
+      "https://example.com/",
+    );
+    add.mockResolvedValueOnce(false);
+    const sendResponse = vi.fn();
+
+    await getHandler("addProtectedSite")(
+      { hostname: "not a host" },
+      {} as chrome.runtime.MessageSender,
+      sendResponse,
+    );
+
+    expect(add).toHaveBeenCalledWith("not a host");
+    expect(sendResponse).toHaveBeenCalledWith({ status: "error" });
   });
 
   it("delegates HTTP protection additions and removals with a normalized hostname", async () => {
