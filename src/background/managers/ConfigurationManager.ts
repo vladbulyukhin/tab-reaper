@@ -6,6 +6,21 @@ import {
 } from "../../common/models/Configuration";
 import { SyncedValue } from "../utils/SyncedValue";
 
+const booleanFields = [
+  "diagnosticsEnabled",
+  "keepAudibleTabs",
+  "keepGroupedTabs",
+  "keepPinnedTabs",
+  "rememberRecentlyClosedTabs",
+  "removeExactDuplicates",
+] as const satisfies ReadonlyArray<keyof IConfiguration>;
+
+const numberFields = [
+  "tabCountThreshold",
+  "tabRemovalDelayMin",
+  "version",
+] as const satisfies ReadonlyArray<keyof IConfiguration>;
+
 export interface IConfigurationManager {
   get(): Promise<IConfiguration>;
   save(configuration: Partial<IConfiguration>): Promise<void>;
@@ -31,35 +46,24 @@ export class ConfigurationManager implements IConfigurationManager {
       toConfiguration({ ...current, ...configuration }),
     );
   }
+  // Older versions stored fields with other types (v0.0.x kept `version` as a
+  // string, and a NaN delay serializes as null). Keep the valid fields and let
+  // defaults fill in the rest instead of discarding the whole configuration.
   private parseConfiguration(value: unknown): IConfiguration | null {
     if (!value || typeof value !== "object" || Array.isArray(value)) {
       return null;
     }
 
-    const configuration = value as Partial<IConfiguration>;
-    if (
-      (configuration.diagnosticsEnabled !== undefined &&
-        typeof configuration.diagnosticsEnabled !== "boolean") ||
-      (configuration.keepAudibleTabs !== undefined &&
-        typeof configuration.keepAudibleTabs !== "boolean") ||
-      (configuration.keepGroupedTabs !== undefined &&
-        typeof configuration.keepGroupedTabs !== "boolean") ||
-      (configuration.keepPinnedTabs !== undefined &&
-        typeof configuration.keepPinnedTabs !== "boolean") ||
-      (configuration.rememberRecentlyClosedTabs !== undefined &&
-        typeof configuration.rememberRecentlyClosedTabs !== "boolean") ||
-      (configuration.removeExactDuplicates !== undefined &&
-        typeof configuration.removeExactDuplicates !== "boolean") ||
-      (configuration.tabCountThreshold !== undefined &&
-        typeof configuration.tabCountThreshold !== "number") ||
-      (configuration.tabRemovalDelayMin !== undefined &&
-        typeof configuration.tabRemovalDelayMin !== "number") ||
-      (configuration.version !== undefined &&
-        typeof configuration.version !== "number")
-    ) {
-      return null;
+    const stored = value as Record<string, unknown>;
+    const configuration: Partial<Record<keyof IConfiguration, unknown>> = {};
+    for (const key of booleanFields) {
+      if (typeof stored[key] === "boolean") configuration[key] = stored[key];
+    }
+    for (const key of numberFields) {
+      if (typeof stored[key] === "number" && Number.isFinite(stored[key]))
+        configuration[key] = stored[key];
     }
 
-    return toConfiguration(configuration);
+    return toConfiguration(configuration as Partial<IConfiguration>);
   }
 }

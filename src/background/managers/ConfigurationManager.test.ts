@@ -172,7 +172,7 @@ describe("ConfigurationManager", () => {
 
     it.each([
       ["serialized-invalid", "{"],
-      ["wrong-shaped", { keepPinnedTabs: "never" }],
+      ["not an object", JSON.stringify(["keepPinnedTabs"])],
     ])(
       "uses local data when sync configuration is %s",
       async (_description, invalidSyncValue) => {
@@ -192,6 +192,41 @@ describe("ConfigurationManager", () => {
         );
       },
     );
+
+    it("keeps valid fields of a 0.0.x configuration and drops invalid ones", async () => {
+      createManager({
+        [configurationKey]: JSON.stringify({
+          keepPinnedTabs: false,
+          tabRemovalDelayMin: 120,
+          version: "0.0.1",
+        }),
+      });
+
+      await expect(configurationManager.get()).resolves.toEqual({
+        ...emptyConfiguration,
+        keepPinnedTabs: false,
+        tabRemovalDelayMin: 120,
+      });
+    });
+
+    it("replaces only the fields with the wrong type", async () => {
+      createManager({
+        [configurationKey]: JSON.stringify({
+          keepGroupedTabs: false,
+          keepPinnedTabs: "never",
+          tabCountThreshold: 12,
+          tabRemovalDelayMin: Number.NaN,
+          version: 5,
+        }),
+      });
+
+      await expect(configurationManager.get()).resolves.toEqual({
+        ...emptyConfiguration,
+        keepGroupedTabs: false,
+        tabCountThreshold: 12,
+        version: 5,
+      });
+    });
 
     it("rejects when both storage reads fail", async () => {
       syncStorage.get.mockRejectedValueOnce(new Error("sync unavailable"));
