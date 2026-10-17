@@ -1,5 +1,8 @@
+import { mkdtemp, rm } from "node:fs/promises";
 import { type Server, createServer } from "node:http";
-import type { BrowserContext, Page } from "@playwright/test";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import { type BrowserContext, type Page, chromium } from "@playwright/test";
 import { sendExtensionMessage } from "./helpers/extensionMessages";
 import { expect, test } from "./helpers/fixtures";
 import { HomePage } from "./pages/HomePage";
@@ -219,7 +222,7 @@ const withServer = async (run: (origin: string) => Promise<void>) => {
 };
 
 test.describe("extension state across Chrome worker and tab restarts", () => {
-  test("does not hold a fresh same-URL tab after a missed close notification", async ({
+  test("does not hold a fresh same-URL tab after a missed close notification in the same browser session", async ({
     page,
     extensionId,
   }) => {
@@ -264,6 +267,71 @@ test.describe("extension state across Chrome worker and tab restarts", () => {
       );
       await removeTabs(page, [freshId]);
     });
+  });
+
+  test("restores a Keep after a full browser restart renumbers its tab", async () => {
+    test.setTimeout(90_000);
+    const profile = await mkdtemp(path.join(tmpdir(), "tab-reaper-keep-"));
+    const extension = path.resolve("dist");
+    let context: BrowserContext | undefined;
+    const launch = async (restoreSession: boolean) => {
+      context = await chromium.launchPersistentContext(profile, {
+        executablePath:
+          process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE ??
+          chromium.executablePath(),
+        headless: false,
+        args: [
+          ...(process.env.PLAYWRIGHT_EXTENSION_HEADLESS !== "0"
+            ? ["--headless=new"]
+            : []),
+          `--disable-extensions-except=${extension}`,
+          `--load-extension=${extension}`,
+          ...(restoreSession ? ["--restore-last-session"] : []),
+        ],
+      });
+      const worker =
+        context.serviceWorkers()[0] ??
+        (await context.waitForEvent("serviceworker"));
+      const extensionId = worker.url().split("/")[2];
+      const page = await context.newPage();
+      const homePage = new HomePage(page, extensionId);
+      await homePage.goto();
+      return { homePage, page };
+    };
+    try {
+      await withServer(async (origin) => {
+        const keptUrl = `${origin}/kept-across-restart`;
+        let { homePage, page } = await launch(false);
+        await configureCleanup(page, 0.2);
+        const oldId = await createTab(page, keptUrl);
+        await activateTab(page, oldId);
+        await page.reload();
+        await homePage.getCurrentTabKeepToggle().click();
+        await expect(homePage.getCurrentTabKeepToggle()).toBeChecked();
+        await expect
+          .poll(async () => (await boundRecord(page, keptUrl))?.kept)
+          .toBe(true);
+        await context?.close();
+
+        ({ homePage, page } = await launch(true));
+        await expect
+          .poll(() => queryTabsByUrl(page, keptUrl), { timeout: 15_000 })
+          .toHaveLength(1);
+        const [restored] = await queryTabsByUrl(page, keptUrl);
+        // Longer than the 12 s delay: an unprotected restored tab would close.
+        await new Promise((resolve) => setTimeout(resolve, 15_000));
+        await expect.poll(() => queryTabsByUrl(page, keptUrl)).toHaveLength(1);
+        await activateTab(page, restored.id);
+        await expect
+          .poll(() =>
+            sendExtensionMessage(page, "getCurrentTabKeepState", undefined),
+          )
+          .toMatchObject({ status: "ok", kept: true, uncertain: false });
+      });
+    } finally {
+      await context?.close();
+      await rm(profile, { recursive: true, force: true });
+    }
   });
 
   test("restores the remaining snooze time and resumes cleanup after expiry", async ({

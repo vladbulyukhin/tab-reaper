@@ -20,6 +20,7 @@ export interface IExcludedTabManager {
     tabUrl?: string | null,
   ): Promise<{ kept: boolean; uncertain: boolean }>;
   reconcileOpenTabs(tabs: ReadonlyArray<chrome.tabs.Tab>): Promise<void>;
+  startBrowserSession(): Promise<void>;
 }
 
 type ExcludedTabInfo = {
@@ -148,6 +149,15 @@ export class ExcludedTabManager implements IExcludedTabManager {
     await this.lifecycleQueue.addTask(() => this.reconcileOpenTabsNow(tabs));
   }
 
+  // Every stored tab ID belongs to the previous browser session: unbind
+  // them all so none is mistaken for a closed tab or a reused ID.
+  public async startBrowserSession(): Promise<void> {
+    await this.lifecycleQueue.addTask(async () => {
+      await this.idleTabLedger.unbindTabs();
+      await this.excludedTabsById.update(() => ({}));
+    });
+  }
+
   private async excludeNow(tabId: TabId): Promise<void> {
     const tab = await this.browserApiProvider.tab.get(tabId).catch(() => null);
     if (!tab) {
@@ -198,7 +208,8 @@ export class ExcludedTabManager implements IExcludedTabManager {
   private async reconcileOpenTabsNow(
     tabs: ReadonlyArray<chrome.tabs.Tab>,
   ): Promise<void> {
-    await this.idleTabLedger.reconcile(tabs);
+    const records = await this.idleTabLedger.reconcile(tabs);
+    const excludedBefore = await this.getMap();
     const queriedTabs = new Map(
       tabs
         .filter(
@@ -207,6 +218,27 @@ export class ExcludedTabManager implements IExcludedTabManager {
         )
         .map((tab) => [tab.id, tab]),
     );
+    // A Keep restored to a renumbered tab needs a runtime binding, so a
+    // missed close notification later in this session drops it.
+    const restoredKeeps = records.flatMap((record) => {
+      const tab =
+        record.kept && record.tabId !== undefined
+          ? queriedTabs.get(record.tabId)
+          : undefined;
+      return tab && !excludedBefore[String(tab.id)] ? [tab] : [];
+    });
+    if (restoredKeeps.length > 0) {
+      const excludedAt = new Date().toISOString();
+      await this.excludedTabsById.update((current) => ({
+        ...current,
+        ...Object.fromEntries(
+          restoredKeeps.map((tab) => [
+            String(tab.id),
+            { url: tab.url ?? null, excludedAt },
+          ]),
+        ),
+      }));
+    }
     const excluded = await this.getMap();
 
     for (const storedTabId of Object.keys(excluded)) {

@@ -33,6 +33,7 @@ function isRecoverableUrl(url: string | null | undefined): boolean {
 
 // Before 1.0.0, Keeps lived in session storage and are lost on update.
 const firstDurableKeepVersion = "1.0.0";
+const browserSessionStorageKey = "browserSessionStartedAt";
 
 function isVersionBelow(version: string, minimum: string): boolean {
   const parts = version.split(".").map((part) => Number.parseInt(part, 10));
@@ -119,6 +120,7 @@ export class OpenedTabManager implements IOpenedTabManager {
   private readonly idleTabLedger: IdleTabLedger;
 
   private readonly history: RecentlyClosedHistory;
+  private browserSessionStart: Promise<void> | null = null;
 
   constructor(
     private readonly browserApiProvider: Pick<
@@ -313,9 +315,32 @@ export class OpenedTabManager implements IOpenedTabManager {
     );
   }
 
+  // Session storage is cleared when the browser restarts but survives worker
+  // restarts. Checking it here, instead of waiting for onStartup, means the
+  // background's own first reconcile cannot run against stale tab IDs.
+  private startBrowserSessionIfNew(): Promise<void> {
+    this.browserSessionStart ??= (async () => {
+      const stored = (await this.browserApiProvider.sessionStorage.get(
+        browserSessionStorageKey,
+      )) as unknown as Record<string, unknown> | undefined;
+      if (stored?.[browserSessionStorageKey] !== undefined) return;
+      await this.excludedTabManager.startBrowserSession();
+      await this.browserApiProvider.sessionStorage.set({
+        [browserSessionStorageKey]: Date.now(),
+      });
+    })().catch((error) => {
+      this.browserSessionStart = null;
+      this.recordDiagnostic("browser-session-start-failed", {
+        error: String(error),
+      });
+    });
+    return this.browserSessionStart;
+  }
+
   private async registerOpenTabs(
     options: { idleSince?: number } = {},
   ): Promise<void> {
+    await this.startBrowserSessionIfNew();
     await this.tabAlarmManager.clearLegacyAlarms();
     const allTabs = await this.safeQueryAllTabs();
     const tabs = allTabs.filter(
@@ -772,10 +797,18 @@ export class OpenedTabManager implements IOpenedTabManager {
       }
       return;
     }
+    // Same-URL tabs held only by this tab's Keep can close once it is gone.
+    // Read them before the Keep is deleted below.
+    const heldTabIdsRead = this.idleTabLedger
+      .getHeldTabIds(tabId)
+      .catch((): TabId[] => []);
     // Queue stale exclusion deletion before any later user keep write.
     const staleExclusionCleanup = this.excludedTabManager.forget(tabId);
     const generation = await generationRead;
     await staleExclusionCleanup;
+    for (const heldTabId of await heldTabIdsRead) {
+      void this.scheduleTabRemoval(heldTabId).catch(() => undefined);
+    }
     if (this.lifecycle.isLifecycleOwner(tabId, removalRevision)) {
       await this.tabLifecycleQueue.addTask(async () => {
         if (

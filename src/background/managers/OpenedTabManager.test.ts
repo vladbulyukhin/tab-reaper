@@ -63,8 +63,10 @@ describe("OpenedTabManager", () => {
         delete localValues[key];
       }
     });
+    // The marker models a background start within the current browser session.
     browserApiProvider.sessionStorage.get.mockReturnValue(
       Promise.resolve({
+        browserSessionStartedAt: 1,
         previousActiveTabByWindow: {},
         recentlyRemovedTabs: new CircularQueue(10),
       }),
@@ -1613,6 +1615,163 @@ describe("OpenedTabManager", () => {
       await listener();
 
       expect(excludedTabManager.reconcileOpenTabs).toHaveBeenCalledWith([tab]);
+    });
+  });
+
+  describe("Keep identity across browser restarts", () => {
+    const keptUrl = "https://kept.example/";
+    const tabAt = (id: number, url: string, index = 0) =>
+      ({
+        ...createTestTab(),
+        active: false,
+        id,
+        index,
+        url,
+        windowId: 1,
+      }) as chrome.tabs.Tab & { id: number };
+    let currentTabs: Array<chrome.tabs.Tab & { id: number }>;
+    let ledger: IdleTabLedger;
+    let realExcludedTabManager: ExcludedTabManager;
+
+    beforeEach(() => {
+      currentTabs = [];
+      mockTabQuery(async () => currentTabs);
+      mockTabGet(async (tabId) => {
+        const tab = currentTabs.find((candidate) => candidate.id === tabId);
+        if (!tab) throw new Error(`No tab with id: ${tabId}.`);
+        return tab;
+      });
+      ledger = new IdleTabLedger(browserApiProvider.localStorage);
+      realExcludedTabManager = new ExcludedTabManager(
+        browserApiProvider,
+        extensionActionManager,
+        ledger,
+      );
+    });
+
+    const keepInPreviousSession = async (
+      tabs: Array<chrome.tabs.Tab & { id: number }>,
+      keptId: number,
+    ) => {
+      currentTabs = tabs;
+      await ledger.reconcile(tabs);
+      await realExcludedTabManager.exclude(keptId);
+    };
+
+    const startBackground = () => {
+      const manager = new OpenedTabManager(
+        browserApiProvider,
+        tabAlarmManager,
+        realExcludedTabManager,
+        protectedSiteManager,
+        snoozeManager,
+        configurationManager,
+        extensionActionManager,
+        ledger,
+      );
+      manager.watchTabs();
+      return manager;
+    };
+
+    const startNewBrowserSession = async () => {
+      browserApiProvider.sessionStorage.get.mockReturnValue(
+        Promise.resolve({
+          previousActiveTabByWindow: {},
+          recentlyRemovedTabs: new CircularQueue(10),
+        }),
+      );
+      await startBackground().rescheduleOpenTabs();
+    };
+
+    const alarmedTabIds = () => {
+      const { records } = localValues.idleTabLedger as {
+        records: Array<{ id: string; tabId?: number }>;
+      };
+      return (
+        tabAlarmManager.setIdleAlarm.mock.calls as unknown as Array<[string]>
+      ).map(
+        ([recordId]) => records.find((record) => record.id === recordId)?.tabId,
+      );
+    };
+
+    it("restores a full Keep when a browser restart renumbers the kept tab", async () => {
+      await keepInPreviousSession([tabAt(201, keptUrl)], 201);
+
+      currentTabs = [tabAt(301, keptUrl)];
+      tabAlarmManager.setIdleAlarm.mockClear();
+      await startNewBrowserSession();
+
+      await expect(
+        realExcludedTabManager.getKeepState(301, keptUrl),
+      ).resolves.toEqual({ kept: true, uncertain: false });
+      expect(alarmedTabIds()).not.toContain(301);
+
+      // The restored Keep survives later reconciles in the same session.
+      await startBackground().rescheduleOpenTabs();
+      await expect(
+        realExcludedTabManager.getKeepState(301, keptUrl),
+      ).resolves.toEqual({ kept: true, uncertain: false });
+    });
+
+    it("gives every restored tab a Safety hold when several share the kept URL", async () => {
+      await keepInPreviousSession([tabAt(201, keptUrl)], 201);
+
+      currentTabs = [tabAt(301, keptUrl, 0), tabAt(302, keptUrl, 1)];
+      await startNewBrowserSession();
+
+      for (const tabId of [301, 302]) {
+        await expect(
+          realExcludedTabManager.getKeepState(tabId, keptUrl),
+        ).resolves.toEqual({ kept: false, uncertain: true });
+      }
+    });
+
+    it("does not let a tab that reuses a previous-session ID adopt its Keep", async () => {
+      const otherUrl = "https://other.example/";
+      await keepInPreviousSession([tabAt(5, keptUrl)], 5);
+
+      currentTabs = [tabAt(5, otherUrl, 0), tabAt(9, keptUrl, 1)];
+      await startNewBrowserSession();
+
+      await expect(
+        realExcludedTabManager.getKeepState(5, otherUrl),
+      ).resolves.toEqual({ kept: false, uncertain: false });
+      await realExcludedTabManager.exclude(5);
+      await realExcludedTabManager.include(5);
+      await expect(
+        realExcludedTabManager.getKeepState(9, keptUrl),
+      ).resolves.toEqual({ kept: true, uncertain: false });
+    });
+
+    it("schedules same-URL tabs once the kept tab closes", async () => {
+      await keepInPreviousSession([tabAt(401, keptUrl, 0)], 401);
+      currentTabs = [tabAt(401, keptUrl, 0), tabAt(402, keptUrl, 1)];
+      const manager = startBackground();
+      await manager.rescheduleOpenTabs();
+      await expect(
+        realExcludedTabManager.getKeepState(402, keptUrl),
+      ).resolves.toEqual({ kept: false, uncertain: true });
+      expect(alarmedTabIds()).not.toContain(402);
+
+      currentTabs = [tabAt(402, keptUrl, 1)];
+      const removedListeners = (
+        browserApiProvider.tab.onRemoved.addListener as unknown as {
+          mock: {
+            calls: Array<
+              [
+                (
+                  tabId: number,
+                  removeInfo: chrome.tabs.TabRemoveInfo,
+                ) => Promise<void>,
+              ]
+            >;
+          };
+        }
+      ).mock.calls;
+      const [onRemoved] = removedListeners[removedListeners.length - 1];
+      await onRemoved(401, { isWindowClosing: false, windowId: 1 });
+
+      await vi.waitFor(() => expect(alarmedTabIds()).toContain(402));
     });
   });
 

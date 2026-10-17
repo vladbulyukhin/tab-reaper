@@ -197,6 +197,33 @@ export class IdleTabLedger {
         matchedRecordByTabId.set(tabId, direct);
       }
 
+      // A Keep whose tab ID belonged to an earlier session (or a closed
+      // window) is restored to the only open tab with its URL. Several open
+      // tabs with that URL each get a Safety hold below instead.
+      for (const identity of identities) {
+        const tabId = identity.tab.id;
+        if (typeof tabId !== "number" || matchedRecordByTabId.has(tabId)) {
+          continue;
+        }
+        if (
+          identities.filter((other) => other.urlKey === identity.urlKey)
+            .length !== 1
+        )
+          continue;
+        const [savedKeep] = state.records
+          .filter(
+            (record) =>
+              unmatchedRecordIds.has(record.id) &&
+              record.kept &&
+              record.tabId === undefined &&
+              record.urlKey === identity.urlKey,
+          )
+          .sort((a, b) => b.lastSeenAt - a.lastSeenAt);
+        if (!savedKeep) continue;
+        unmatchedRecordIds.delete(savedKeep.id);
+        matchedRecordByTabId.set(tabId, savedKeep);
+      }
+
       for (const identity of identities) {
         const tabId = identity.tab.id;
         if (typeof tabId !== "number" || matchedRecordByTabId.has(tabId)) {
@@ -432,6 +459,31 @@ export class IdleTabLedger {
     };
     state.records.push(record);
     return record;
+  }
+
+  // Tab IDs from an earlier browser session may be reused by unrelated tabs.
+  // Drop every binding; reconcile then matches records by URL and position.
+  public async unbindTabs(): Promise<void> {
+    await this.updateState(async (state) => {
+      for (const record of state.records) record.tabId = undefined;
+      return state;
+    });
+  }
+
+  // Open tabs whose Safety hold depends on the Keep bound to `tabId`.
+  public async getHeldTabIds(tabId: TabId): Promise<TabId[]> {
+    const state = await this.load();
+    const source = state.records.find(
+      (record) => record.tabId === tabId && record.kept,
+    );
+    if (!source) return [];
+    return state.records.flatMap((record) =>
+      record.uncertainKeep &&
+      record.tabId !== undefined &&
+      record.keepSourceIds?.includes(source.id)
+        ? [record.tabId]
+        : [],
+    );
   }
 
   public async getBoundRecord(tabId: TabId): Promise<IdleTabRecord | null> {
