@@ -4,7 +4,22 @@ import {
   emptyConfiguration,
   toConfiguration,
 } from "../../common/models/Configuration";
-import { PersistedValue } from "../utils/PersistedValue";
+import { SyncedValue } from "../utils/SyncedValue";
+
+const booleanFields = [
+  "diagnosticsEnabled",
+  "keepAudibleTabs",
+  "keepGroupedTabs",
+  "keepPinnedTabs",
+  "rememberRecentlyClosedTabs",
+  "removeExactDuplicates",
+] as const satisfies ReadonlyArray<keyof IConfiguration>;
+
+const numberFields = [
+  "tabCountThreshold",
+  "tabRemovalDelayMin",
+  "version",
+] as const satisfies ReadonlyArray<keyof IConfiguration>;
 
 export interface IConfigurationManager {
   get(): Promise<IConfiguration>;
@@ -12,26 +27,43 @@ export interface IConfigurationManager {
 }
 
 export class ConfigurationManager implements IConfigurationManager {
-  private readonly configuration: PersistedValue<IConfiguration>;
-
+  private readonly configuration: SyncedValue<IConfiguration>;
   constructor(
-    private readonly browserApiProvider: Pick<
-      IBrowserApiProvider,
-      "syncStorage"
-    >,
+    storage: Pick<IBrowserApiProvider, "syncStorage" | "localStorage">,
   ) {
-    this.configuration = new PersistedValue<IConfiguration>(
-      this.browserApiProvider.syncStorage,
+    this.configuration = new SyncedValue(
+      storage,
       "configuration",
       emptyConfiguration,
+      (value) => this.parseConfiguration(value),
     );
   }
-
-  public async get(): Promise<IConfiguration> {
-    return toConfiguration(await this.configuration.get());
+  public get(): Promise<IConfiguration> {
+    return this.configuration.get();
   }
+  public save(configuration: Partial<IConfiguration>): Promise<void> {
+    return this.configuration.update((current) =>
+      toConfiguration({ ...current, ...configuration }),
+    );
+  }
+  // Older versions stored fields with other types (v0.0.x kept `version` as a
+  // string, and a NaN delay serializes as null). Keep the valid fields and let
+  // defaults fill in the rest instead of discarding the whole configuration.
+  private parseConfiguration(value: unknown): IConfiguration | null {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      return null;
+    }
 
-  public async save(configuration: Partial<IConfiguration>): Promise<void> {
-    await this.configuration.update(() => toConfiguration(configuration));
+    const stored = value as Record<string, unknown>;
+    const configuration: Partial<Record<keyof IConfiguration, unknown>> = {};
+    for (const key of booleanFields) {
+      if (typeof stored[key] === "boolean") configuration[key] = stored[key];
+    }
+    for (const key of numberFields) {
+      if (typeof stored[key] === "number" && Number.isFinite(stored[key]))
+        configuration[key] = stored[key];
+    }
+
+    return toConfiguration(configuration as Partial<IConfiguration>);
   }
 }

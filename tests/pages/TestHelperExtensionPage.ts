@@ -28,4 +28,59 @@ export class TestHelperExtensionPage {
     await this.page.locator("#groupTabsButton").click();
     await waitMs(1000);
   }
+
+  async createWindowWithTabs(urls: string[]): Promise<number> {
+    const windowId = await this.page.evaluate(async (windowUrls) => {
+      const [firstUrl, ...additionalUrls] = windowUrls;
+      if (!firstUrl) return null;
+
+      const createdWindow = await new Promise<chrome.windows.Window>(
+        (resolve, reject) => {
+          chrome.windows.create(
+            { url: firstUrl, focused: false },
+            (browserWindow) => {
+              const error = chrome.runtime.lastError;
+              if (error || !browserWindow?.id) {
+                reject(new Error(error?.message ?? "Window was not created"));
+                return;
+              }
+
+              resolve(browserWindow);
+            },
+          );
+        },
+      );
+
+      await Promise.all(
+        additionalUrls.map(
+          (url) =>
+            new Promise<void>((resolve, reject) => {
+              chrome.tabs.create(
+                {
+                  windowId: createdWindow.id,
+                  url,
+                  active: false,
+                },
+                () => {
+                  const error = chrome.runtime.lastError;
+                  if (error) {
+                    reject(new Error(error.message));
+                    return;
+                  }
+
+                  resolve();
+                },
+              );
+            }),
+        ),
+      );
+
+      return createdWindow.id ?? null;
+    }, urls);
+    if (typeof windowId !== "number") {
+      throw new Error("Window was not created");
+    }
+    await waitMs(1000);
+    return windowId;
+  }
 }

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { chromeApiProvider } from "../../api/chromeApiProvider";
 import {
   type IMessageService,
@@ -19,12 +19,9 @@ export const BackgroundCommunicationContext =
 export const BackgroundCommunicationProvider: React.FC<
   React.PropsWithChildren
 > = ({ children }) => {
-  const [messageService] = useState(new MessageService(chromeApiProvider));
-
-  useEffect(() => {
-    const cleanUp = messageService.listen();
-    return () => cleanUp();
-  }, [messageService]);
+  const [messageService] = useState(
+    () => new MessageService(chromeApiProvider),
+  );
 
   const value = useMemo(
     () => ({ sendMessage: messageService.sendMessage }),

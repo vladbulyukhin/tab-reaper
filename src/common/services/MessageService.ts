@@ -4,6 +4,7 @@ import type {
   MessagePayloads,
   MessageResponses,
   MessageTypes,
+  RuntimeMessage,
 } from "../models/Message";
 
 export type CleanUp = () => void;
@@ -12,7 +13,32 @@ type MessageCallback<M extends MessageTypes> = (
   payload: MessagePayloads[M],
   sender: chrome.runtime.MessageSender,
   sendResponse: (response: MessageResponses[M]) => void,
-) => void;
+) => void | Promise<void>;
+
+const transportErrorMarker = "__tabReaperMessageServiceTransportError";
+const fallbackHandlerErrorMessage = "Message handler failed";
+
+type TransportError = {
+  [transportErrorMarker]: true;
+  message: string;
+};
+
+function isTransportError(response: unknown): response is TransportError {
+  return (
+    typeof response === "object" &&
+    response !== null &&
+    (response as Record<string, unknown>)[transportErrorMarker] === true &&
+    typeof (response as Record<string, unknown>).message === "string"
+  );
+}
+
+function normalizeHandlerError(error: unknown): string {
+  try {
+    return error instanceof Error ? error.message : String(error);
+  } catch {
+    return fallbackHandlerErrorMessage;
+  }
+}
 
 export interface IMessageService {
   listen(): CleanUp;
@@ -27,8 +53,14 @@ export interface IMessageService {
 }
 
 export class MessageService implements IMessageService {
+  // Request/response messages have exactly one owner, unlike broadcast events.
   // biome-ignore lint/suspicious/noExplicitAny: allows any type of callback
-  private listeners: Map<MessageTypes, Set<MessageCallback<any>>> = new Map();
+  private listeners: Map<MessageTypes, MessageCallback<any>> = new Map();
+  private runtimeListener?: (
+    message: Message | RuntimeMessage,
+    sender: chrome.runtime.MessageSender,
+    sendResponse: (response?: unknown) => void,
+  ) => boolean;
 
   constructor(
     private readonly browserApiProvider: Pick<IBrowserApiProvider, "runtime">,
@@ -37,25 +69,80 @@ export class MessageService implements IMessageService {
   }
 
   public listen(): CleanUp {
-    const listener = (
-      message: Message,
-      sender: chrome.runtime.MessageSender,
-      sendResponse: () => void,
-    ) => {
-      const callbacks = this.listeners.get(message.type) ?? new Set();
+    if (this.runtimeListener) {
+      return () => this.removeRuntimeListener();
+    }
 
-      for (const callback of callbacks) {
-        callback(message?.payload, sender, sendResponse);
+    this.runtimeListener = (
+      message: Message | RuntimeMessage,
+      sender: chrome.runtime.MessageSender,
+      sendResponse: (response?: unknown) => void,
+    ) => {
+      const messageType = message?.type;
+
+      if (!messageType || typeof messageType !== "string") {
+        return false;
+      }
+      const callback = this.listeners.get(messageType as MessageTypes);
+
+      if (!callback) {
+        return false;
+      }
+
+      let handlerCompleted = false;
+      let responseSent = false;
+      let bufferedResponse: unknown;
+      let hasBufferedResponse = false;
+
+      function sendBufferedResponse() {
+        if (!hasBufferedResponse || responseSent) return;
+        responseSent = true;
+        sendResponse(bufferedResponse);
+      }
+
+      function respond(response: unknown) {
+        if (hasBufferedResponse || responseSent) return;
+        bufferedResponse = response;
+        hasBufferedResponse = true;
+        if (handlerCompleted) {
+          sendBufferedResponse();
+        }
+      }
+
+      function sendTransportError(error: unknown) {
+        if (responseSent) return;
+        responseSent = true;
+        sendResponse({
+          [transportErrorMarker]: true,
+          message: normalizeHandlerError(error),
+        });
+      }
+
+      try {
+        const result = callback(
+          message.payload as never,
+          sender,
+          respond as never,
+        );
+        if (result) {
+          void result.then(() => {
+            handlerCompleted = true;
+            sendBufferedResponse();
+          }, sendTransportError);
+        } else {
+          handlerCompleted = true;
+          sendBufferedResponse();
+        }
+      } catch (error) {
+        sendTransportError(error);
       }
 
       return true;
     };
 
-    this.browserApiProvider.runtime.onMessage.addListener(listener);
+    this.browserApiProvider.runtime.onMessage.addListener(this.runtimeListener);
 
-    return () => {
-      this.browserApiProvider.runtime.onMessage.removeListener(listener);
-    };
+    return () => this.removeRuntimeListener();
   }
 
   public onMessage<K extends MessageTypes>(
@@ -64,16 +151,17 @@ export class MessageService implements IMessageService {
       payload: MessagePayloads[K],
       sender: chrome.runtime.MessageSender,
       sendResponse: (response: MessageResponses[K]) => void,
-    ) => void,
+    ) => void | Promise<void>,
   ): CleanUp {
-    const currentListeners = this.listeners.get(type) ?? new Set();
-    this.listeners.set(type, new Set([...currentListeners, callback]));
+    if (this.listeners.has(type)) {
+      throw new Error(`A handler is already registered for ${type}`);
+    }
+    this.listeners.set(type, callback);
 
     return () => {
-      this.listeners.set(
-        type,
-        new Set([...currentListeners].filter((cb) => cb !== callback)),
-      );
+      if (this.listeners.get(type) === callback) {
+        this.listeners.delete(type);
+      }
     };
   }
 
@@ -81,6 +169,19 @@ export class MessageService implements IMessageService {
     type: K,
     payload: MessagePayloads[K],
   ): Promise<MessageResponses[K]> {
-    return await this.browserApiProvider.runtime.sendMessage({ type, payload });
+    const response: MessageResponses[K] =
+      await this.browserApiProvider.runtime.sendMessage({ type, payload });
+    if (isTransportError(response)) {
+      throw new Error(response.message);
+    }
+    return response;
+  }
+
+  private removeRuntimeListener(): void {
+    if (!this.runtimeListener) return;
+    this.browserApiProvider.runtime.onMessage.removeListener(
+      this.runtimeListener,
+    );
+    this.runtimeListener = undefined;
   }
 }

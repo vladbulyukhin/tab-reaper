@@ -1,7 +1,11 @@
 .parcel-cache/
+.build/
+artifacts/
 coverage/
 dist/
 node_modules/
 .idea/
 .history/
 playwright-report/
+.DS_Store
+test-results/

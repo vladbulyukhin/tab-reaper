@@ -4,7 +4,6 @@ import iconGray16 from "/icons/icon-gray-16.png?url";
 import iconGray32 from "/icons/icon-gray-32.png?url";
 import type { IBrowserApiProvider } from "../../api/IBrowserApiProvider";
 import type { TabId } from "../../types";
-import { PersistedValue } from "../utils/PersistedValue";
 import { SequentialTaskQueue } from "../utils/SequentialTaskQueue";
 import { abbreviateNumber } from "../utils/abbreviateNumber";
 
@@ -21,11 +20,10 @@ const enabledIconPaths = {
 export interface IExtensionActionManager {
   disableExtensionIcon(tabId?: TabId): Promise<void>;
   enableExtensionIcon(tabId?: TabId): Promise<void>;
-  incrementBadgeCounter(): Promise<void>;
+  setBadgeCounter(count: number): Promise<void>;
 }
 
 export class ExtensionActionManager implements IExtensionActionManager {
-  private badgeCount: PersistedValue<number>;
   private badgeUpdateQueue: SequentialTaskQueue;
 
   constructor(
@@ -34,12 +32,6 @@ export class ExtensionActionManager implements IExtensionActionManager {
       "action" | "sessionStorage"
     >,
   ) {
-    this.badgeCount = new PersistedValue(
-      browserApiProvider.sessionStorage,
-      "badgeCount",
-      0,
-    );
-
     this.badgeUpdateQueue = new SequentialTaskQueue();
   }
 
@@ -66,8 +58,7 @@ export class ExtensionActionManager implements IExtensionActionManager {
     ]);
   }
 
-  public async incrementBadgeCounter(): Promise<void> {
-    const count = await this.badgeCount.update((c) => c + 1);
+  public async setBadgeCounter(count: number): Promise<void> {
     await this.badgeUpdateQueue.addTask(() => this.updateBadgeCounter(count));
   }
 
@@ -80,7 +71,7 @@ export class ExtensionActionManager implements IExtensionActionManager {
         color: [255, 255, 255, 255],
       }),
       this.browserApiProvider.action.setBadgeText({
-        text: abbreviateNumber(newCount),
+        text: newCount > 0 ? abbreviateNumber(newCount) : "",
       }),
     ]);
   }

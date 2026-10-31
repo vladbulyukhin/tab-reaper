@@ -20,6 +20,6 @@
     "types": ["web-ext-types", "chrome", "node"],
     "lib": ["es2020", "dom"]
   },
-  "include": ["src/**/*.ts", "global.d.ts"],
+  "include": ["src/**/*.ts", "src/**/*.tsx", "global.d.ts"],
   "exclude": ["node_modules"]
 }

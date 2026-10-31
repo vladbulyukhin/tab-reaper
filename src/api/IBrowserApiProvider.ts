@@ -1,6 +1,7 @@
 export interface IBrowserAlarmAPI {
   create(name: string, alarmInfo: chrome.alarms.AlarmCreateInfo): Promise<void>;
   clear(name: string): Promise<void>;
+  getAll(): Promise<ReadonlyArray<chrome.alarms.Alarm>>;
   onAlarm: chrome.alarms.AlarmEvent;
 }
 
@@ -15,7 +16,6 @@ export interface IBrowserExtensionActionAPI {
 }
 
 export interface IBrowserRuntimeAPI {
-  getLastError: () => chrome.runtime.LastError | undefined;
   onInstalled: chrome.runtime.RuntimeInstalledEvent;
   onMessage: chrome.runtime.ExtensionMessageEvent;
   onStartup: chrome.runtime.RuntimeEvent;
@@ -42,6 +42,7 @@ export interface IBrowserTabAPI {
   query(
     queryInfo: chrome.tabs.QueryInfo,
   ): Promise<ReadonlyArray<chrome.tabs.Tab>>;
+  sendMessage(tabId: number, message: unknown): Promise<unknown>;
   remove(tabId: number): Promise<void>;
 }
 
@@ -51,6 +52,7 @@ export interface IBrowserApiProvider {
   localStorage: IBrowserStorageAPI;
   runtime: IBrowserRuntimeAPI;
   sessionStorage: IBrowserStorageAPI;
+  sessionStorageKind: "memory-fallback" | "native";
   syncStorage: IBrowserStorageAPI;
   tab: IBrowserTabAPI;
 }

@@ -1,4 +1,4 @@
-import { logInfo } from "./log";
+import { logInfo } from "../../common/utils/log";
 
 export class SequentialTaskQueue {
   // biome-ignore lint/suspicious/noExplicitAny: <explanation>
