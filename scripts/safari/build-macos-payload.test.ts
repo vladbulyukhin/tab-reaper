@@ -279,7 +279,7 @@ it("rechecks release identity after staged validation and before publication", a
   await expect(
     readFile(path.join(artifactDirectory, "previous.txt"), "utf8"),
   ).resolves.toBe("previous");
-}, 10_000);
+});
 
 it("hard-codes the background debug constant to false", async () => {
   const source = await readFile(
