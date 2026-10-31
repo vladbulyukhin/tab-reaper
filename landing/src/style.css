@@ -281,7 +281,6 @@ kbd { display: inline-grid; place-items: center; min-width: 22px; height: 22px; 
 .platform-card h3 { margin: 14px 0 6px; font: 650 24px/1.2 var(--font-display); letter-spacing: -.02em; }
 .platform-card > p:not(.platform-status) { margin: 0 0 22px; color: var(--muted); font-size: 15px; }
 .platform-card .button { margin-top: auto; }
-.platform-soon { margin-top: auto; min-height: 40px; display: inline-flex; align-items: center; padding: 0 16px; border: 1px dashed var(--line); border-radius: 10px; color: var(--muted); font-size: 14px; font-weight: 600; }
 .platform-status { display: inline-flex; align-items: center; gap: 10px; margin: 0; color: var(--muted); font-size: 13px; font-weight: 600; }
 .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #f5a524; box-shadow: 0 0 0 4px color-mix(in srgb, #f5a524 22%, transparent); }
 .platform-card.is-live .status-dot { background: #28c840; box-shadow: 0 0 0 4px color-mix(in srgb, #28c840 22%, transparent); }
@@ -427,7 +426,6 @@ footer a:hover { color: var(--accent); }
 .step-text strong { display: block; margin-bottom: 4px; font-size: 16px; line-height: 1.6; }
 .document-content .step-text p { margin: 0; font-size: 15px; line-height: 1.65; }
 .step-text b { color: var(--ink); font-weight: 600; }
-.setup-note { margin: 18px 0 0; font-size: 14px !important; }
 
 /* Step illustrations */
 .hint { margin: 0; padding: 16px; border: 1px solid var(--line); border-radius: 16px; background: var(--soft); font-size: 12px; color: var(--ink); }

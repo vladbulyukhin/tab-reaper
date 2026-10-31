@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://vladbulyukhin.github.io/tab-reaper/" target="_blank"><img src="public/icons/icon-active-128.png" /></a>
+  <a href="https://tabreaper.app" target="_blank"><img src="public/icons/icon-active-128.png" /></a>
 </p>
 <p align="center">
   <img src="https://img.shields.io/github/license/vladbulyukhin/tab-reaper" alt="licence" />
@@ -12,9 +12,12 @@
 
 # Tab Reaper: Idle Tab Collector
 
-Tab Reaper is an <strong>open-source</strong> [Chrome extension](https://chrome.google.com/webstore/detail/tab-reaper-idle-tab-colle/lpdcbkckljbnkjbajmjhehdilncjjgii) that automatically closes idle tabs, freeing up clutter and
+Tab Reaper is an <strong>open-source</strong> browser extension that automatically closes idle tabs, freeing up clutter and
 helping you stay focused on what matters most. Say goodbye to tab overload and hello to a clean,
 organized browsing experience.
+
+- **Chrome**: [Chrome Web Store](https://chromewebstore.google.com/detail/lpdcbkckljbnkjbajmjhehdilncjjgii)
+- **Safari** on Mac, iPhone and iPad: [App Store](https://apps.apple.com/app/id6821087266)
 
 ## Features
 

@@ -1,8 +1,6 @@
 import { TabDemo, dropElement } from "./demo";
 
-const CHROME_URL = "https://chromewebstore.google.com/detail/lpdcbkckljbnkjbajmjhehdilncjjgii";
-// Set to the App Store listing once the Safari version ships; every Safari CTA switches over.
-const SAFARI_URL = "";
+const SAFARI_URL = "https://apps.apple.com/app/id6821087266";
 
 const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 const isAppleMobile = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
@@ -13,53 +11,25 @@ const prefersSafari = isAppleMobile || isSafari;
 for (const group of document.querySelectorAll<HTMLElement>("[data-cta]")) {
   const chrome = group.querySelector<HTMLAnchorElement>("[data-cta-chrome]");
   const safari = group.querySelector<HTMLAnchorElement>("[data-cta-safari]");
-  if (!chrome || !safari) continue;
-  if (SAFARI_URL) {
-    safari.href = SAFARI_URL;
-    safari.target = "_blank";
-    safari.rel = "noreferrer";
-    safari.querySelector("span")!.textContent = "Get it for Safari";
-  }
-  if (prefersSafari) {
-    group.prepend(safari);
-    safari.classList.replace("secondary", "primary");
-    chrome.classList.replace("primary", "secondary");
-    if (!SAFARI_URL) safari.querySelector("span")!.textContent = "Coming soon to Safari";
-  }
+  if (!chrome || !safari || !prefersSafari) continue;
+  group.prepend(safari);
+  safari.classList.replace("secondary", "primary");
+  chrome.classList.replace("primary", "secondary");
 }
 const navInstall = document.querySelector<HTMLAnchorElement>('[data-install="nav"]');
 if (navInstall && prefersSafari) {
-  navInstall.href = SAFARI_URL || "#get";
-  navInstall.textContent = SAFARI_URL ? "Get for Safari" : "Safari · soon";
-  if (!SAFARI_URL) navInstall.removeAttribute("target");
-} else if (navInstall) {
-  navInstall.href = CHROME_URL;
+  navInstall.href = SAFARI_URL;
+  navInstall.textContent = "Get for Safari";
 }
 
 // Platforms section: the visitor's own browser comes first.
 const platformCards = document.querySelector<HTMLElement>("[data-platform-cards]");
 const safariCard = platformCards?.querySelector<HTMLElement>('[data-platform="safari"]');
 const chromeCard = platformCards?.querySelector<HTMLElement>('[data-platform="chrome"]');
-const platformsLede = document.querySelector<HTMLElement>("[data-platforms-lede]");
-if (safariCard && SAFARI_URL) {
-  safariCard.classList.add("is-live");
-  safariCard.querySelector("[data-safari-status]")!.textContent = "Available now";
-  const link = document.createElement("a");
-  link.className = "button secondary small";
-  link.href = SAFARI_URL;
-  link.target = "_blank";
-  link.rel = "noreferrer";
-  link.textContent = "Get it on the App Store ↗";
-  safariCard.querySelector("[data-safari-card-link]")!.replaceWith(link);
-  if (platformsLede) platformsLede.textContent = "Available for Chrome on desktop and Safari on Mac, iPhone and iPad. Same rules everywhere.";
-}
 if (platformCards && safariCard && chromeCard && prefersSafari) {
   platformCards.prepend(safariCard);
-  if (SAFARI_URL) {
-    safariCard.querySelector(".button")!.classList.replace("secondary", "primary");
-    chromeCard.querySelector(".button")!.classList.replace("primary", "secondary");
-  }
-  if (platformsLede && !SAFARI_URL) platformsLede.textContent = "Coming soon to Safari on Mac, iPhone and iPad, and available now for Chrome on desktop. Same rules everywhere.";
+  safariCard.querySelector(".button")!.classList.replace("secondary", "primary");
+  chromeCard.querySelector(".button")!.classList.replace("primary", "secondary");
 }
 
 // Hero demo: runs only while visible, the page is in the foreground, and the visitor hasn't paused it.
